@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-var BACKEND_URL = "https://starswap-backend.onrender.com";
+var BACKEND_URL = "https://useurchoice-backend.onrender.com";
 
 var SPORTS = [
   { id: "surf",  label: "Surfen",        emoji: "🏄", color: "#0891b2" },
