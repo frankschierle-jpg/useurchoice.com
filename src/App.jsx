@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 
 // ─── BACKEND URL — nach Render-Deploy hier eintragen ───
-var BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://dein-backend.onrender.com";
+var BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://useurchoice-com.onrender.com";
 
 // ─── DATEN ───
 var SPORTS = [
