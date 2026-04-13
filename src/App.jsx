@@ -162,7 +162,8 @@ function FaceCapture({ onComplete }) {
     setCameraActive(false);
   }
 
-  function takePhoto() {
+ function takePhoto() {
+    if (!videoRef.current || !videoRef.current.readyState >= 2) return;
     var count = 3;
     setCountdown(count);
     var timer = setInterval(() => {
