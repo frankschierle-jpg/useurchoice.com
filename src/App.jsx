@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 var BACKEND_URL = "https://useurchoice-backend.onrender.com";
 
@@ -138,19 +138,21 @@ function LoginScreen({ onLogin }) {
 function FaceCapture({ onComplete }) {
   var [currentAngle, setCurrentAngle] = useState(0);
   var [photos, setPhotos] = useState([]);
-  var [cameraActive, setCameraActive] = useState(false);
-  var [countdown, setCountdown] = useState(null);
+  var [started, setStarted] = useState(false);
   var videoRef = useRef(null);
   var streamRef = useRef(null);
 
   async function startCamera() {
     try {
-      var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: 640, height: 480 } });
+      var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setCameraActive(true);
+      setStarted(true);
+      // kleine Verzögerung damit React das video-Element rendert
+      setTimeout(() => {
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      }, 100);
     } catch (e) {
-      alert("Kamera konnte nicht gestartet werden. Bitte Kamera-Erlaubnis erteilen.");
+      alert("Kamera-Erlaubnis benötigt! Bitte in den Browser-Einstellungen erlauben.");
     }
   }
 
@@ -159,30 +161,18 @@ function FaceCapture({ onComplete }) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     }
-    setCameraActive(false);
-  }
-
- function takePhoto() {
-    if (!videoRef.current || !videoRef.current.readyState >= 2) return;
-    var count = 3;
-    setCountdown(count);
-    var timer = setInterval(() => {
-      count--;
-      if (count === 0) {
-        clearInterval(timer);
-        setCountdown(null);
-        captureFrame();
-      } else {
-        setCountdown(count);
-      }
-    }, 1000);
   }
 
   function captureFrame() {
+    var video = videoRef.current;
+    if (!video || video.videoWidth === 0) {
+      alert("Kamera noch nicht bereit. Bitte kurz warten.");
+      return;
+    }
     var canvas = document.createElement("canvas");
-    canvas.width  = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
     canvas.toBlob(blob => {
       var newPhotos = [...photos, { blob, url: URL.createObjectURL(blob), angle: FACE_ANGLES[currentAngle] }];
       setPhotos(newPhotos);
@@ -220,7 +210,7 @@ function FaceCapture({ onComplete }) {
         ))}
       </div>
 
-      {!cameraActive ? (
+      {!started ? (
         <div>
           <div style={{ fontSize:48, marginBottom:12 }}>{angle.icon}</div>
           <div style={{ fontWeight:700, fontSize:16, marginBottom:6 }}>
@@ -234,20 +224,10 @@ function FaceCapture({ onComplete }) {
       ) : (
         <div>
           <div style={{ position:"relative", display:"inline-block", marginBottom:12 }}>
-            <video ref={videoRef} autoPlay playsInline style={{
+            <video ref={videoRef} autoPlay playsInline muted style={{
               width:"100%", maxWidth:320, borderRadius:12,
-              border:`2px solid ${countdown ? "#f59e0b" : "#22d3ee"}`,
-              display:"block",
+              border:"2px solid #22d3ee", display:"block",
             }} />
-            {countdown && (
-              <div style={{
-                position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)",
-                fontSize:80, fontWeight:800, color:"#22d3ee",
-                textShadow:"0 0 40px rgba(34,211,238,0.8)",
-              }}>
-                {countdown}
-              </div>
-            )}
             <div style={{
               position:"absolute", top:10, left:10, right:10,
               background:"rgba(0,0,0,0.7)", borderRadius:8, padding:"6px 10px",
@@ -257,22 +237,17 @@ function FaceCapture({ onComplete }) {
             </div>
           </div>
 
-          <div style={{ display:"flex", gap:8, justifyContent:"center" }}>
-            <button onClick={takePhoto} disabled={!!countdown} style={{
-              padding:"12px 28px", background: countdown ? "rgba(255,255,255,0.04)" : "#22d3ee",
-              border:"none", borderRadius:10, fontWeight:700, cursor: countdown ? "not-allowed" : "pointer",
-              fontFamily:"'Syne',sans-serif", fontSize:14, color:"#000",
-            }}>
-              {countdown ? `📸 ${countdown}...` : "📸 Foto aufnehmen"}
-            </button>
-            <button onClick={stopCamera} style={{
-              padding:"12px 16px", background:"rgba(255,255,255,0.04)",
-              border:"1px solid rgba(255,255,255,0.07)", borderRadius:10,
-              color:"#888", cursor:"pointer", fontFamily:"'Syne',sans-serif",
-            }}>
-              Abbrechen
-            </button>
+          <div style={{ fontWeight:700, fontSize:14, marginBottom:12, color:"#22d3ee" }}>
+            Foto {currentAngle + 1} von 5: {angle.label}
           </div>
+
+          <button onClick={captureFrame} style={{
+            padding:"12px 28px", background:"#22d3ee",
+            border:"none", borderRadius:10, fontWeight:700, cursor:"pointer",
+            fontFamily:"'Syne',sans-serif", fontSize:14, color:"#000",
+          }}>
+            📸 Foto aufnehmen
+          </button>
         </div>
       )}
     </div>
@@ -425,12 +400,17 @@ function ViewerDashboard({ user, onLogout }) {
     try {
       var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:"user" } });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
       setCameraActive(true);
     } catch(e) {
       alert("Kamera-Erlaubnis benötigt!");
     }
   }
+
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [cameraActive]);
 
   function stopCamera() {
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
