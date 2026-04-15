@@ -51,15 +51,15 @@ var ALL_POSES = [
 
 
 var VIDEO_PREVIEWS = [
-  { id:"v1", sport:"surf",  title:"Barrel Ride Bali",       thumb:"https://images.unsplash.com/photo-1502680390548-bdbac40f7154?w=400&q=80", duration:180 },
-  { id:"v2", sport:"surf",  title:"Big Wave Nazaré",        thumb:"https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=400&q=80", duration:90  },
-  { id:"v3", sport:"ski",   title:"Powder Run Chamonix",    thumb:"https://images.unsplash.com/photo-1565992441121-4367c2967103?w=400&q=80", duration:300 },
-  { id:"v4", sport:"climb", title:"El Capitan Free Solo",   thumb:"https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400&q=80", duration:420 },
-  { id:"v5", sport:"box",   title:"Ring Sparring Berlin",   thumb:"https://images.unsplash.com/photo-1517438322307-e67111335449?w=400&q=80", duration:60  },
-  { id:"v6", sport:"yoga",  title:"Sunrise Flow Bali",      thumb:"https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&q=80", duration:600 },
-  { id:"v7", sport:"dive",  title:"Korallenriff Malediven", thumb:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&q=80", duration:360 },
-  { id:"v8", sport:"bike",  title:"Downhill Whistler",      thumb:"https://images.unsplash.com/photo-1544191696-102dbdaeeaa0?w=400&q=80", duration:240 },
-  { id:"v9", sport:"skate", title:"Venice Beach Halfpipe",  thumb:"https://images.unsplash.com/photo-1564296786786-a4dd73e51086?w=400&q=80", duration:120 },
+  { id:"v1", sport:"surf",  title:"Barrel Ride Bali",       thumb:"https://images.unsplash.com/photo-1502680390548-bdbac40f7154?w=400&q=80", duration:180, videoUrl:"https://videos.pexels.com/video-files/1918465/1918465-hd_1920_1080_30fps.mp4" },
+  { id:"v2", sport:"surf",  title:"Big Wave Nazaré",        thumb:"https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=400&q=80", duration:90,  videoUrl:"https://videos.pexels.com/video-files/2499611/2499611-hd_1920_1080_30fps.mp4" },
+  { id:"v3", sport:"ski",   title:"Powder Run Chamonix",    thumb:"https://images.unsplash.com/photo-1565992441121-4367c2967103?w=400&q=80", duration:300, videoUrl:"https://videos.pexels.com/video-files/3551954/3551954-hd_1920_1080_30fps.mp4" },
+  { id:"v4", sport:"climb", title:"El Capitan Free Solo",   thumb:"https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400&q=80", duration:420, videoUrl:"https://videos.pexels.com/video-files/4992801/4992801-hd_1920_1080_30fps.mp4" },
+  { id:"v5", sport:"box",   title:"Ring Sparring Berlin",   thumb:"https://images.unsplash.com/photo-1517438322307-e67111335449?w=400&q=80", duration:60,  videoUrl:"https://videos.pexels.com/video-files/4761429/4761429-hd_1920_1080_30fps.mp4" },
+  { id:"v6", sport:"yoga",  title:"Sunrise Flow Bali",      thumb:"https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&q=80", duration:600, videoUrl:"https://videos.pexels.com/video-files/3997927/3997927-hd_1920_1080_30fps.mp4" },
+  { id:"v7", sport:"dive",  title:"Korallenriff Malediven", thumb:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&q=80", duration:360, videoUrl:"https://videos.pexels.com/video-files/3535473/3535473-hd_1920_1080_30fps.mp4" },
+  { id:"v8", sport:"bike",  title:"Downhill Whistler",      thumb:"https://images.unsplash.com/photo-1544191696-102dbdaeeaa0?w=400&q=80", duration:240, videoUrl:"https://videos.pexels.com/video-files/5752729/5752729-hd_1920_1080_30fps.mp4" },
+  { id:"v9", sport:"skate", title:"Venice Beach Halfpipe",  thumb:"https://images.unsplash.com/photo-1564296786786-a4dd73e51086?w=400&q=80", duration:120, videoUrl:"https://videos.pexels.com/video-files/4792453/4792453-hd_1920_1080_30fps.mp4" },
 ];
 
 function getTokenPrice(s){if(s<=60)return 50;if(s<=180)return 100;if(s<=300)return 300;return 500;}
@@ -99,7 +99,7 @@ var S={
   input:{width:"100%",background:"#0d0e17",border:"1px solid rgba(255,255,255,0.06)",borderRadius:12,padding:"13px 16px",color:"#eef0f6",fontSize:14,fontFamily:"'DM Sans',sans-serif"},
 };
 
-function Logo({size=24}){return <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:size,letterSpacing:"0.05em"}}><span style={{color:"#f59e0b"}}>STAR</span><span style={{color:"#eef0f6"}}>SWAP</span></span>;}
+function Logo({size=24}){return <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:size,letterSpacing:"0.05em"}}><span style={{color:"#f59e0b",textShadow:"0 0 20px rgba(245,158,11,0.5)"}}>STAR</span><span style={{color:"#ffffff",textShadow:"0 0 20px rgba(255,255,255,0.3)"}}>SWAP</span></span>;}
 
 function NavBar({user,onLogout,tokens,earnings}){
   return(
@@ -716,7 +716,7 @@ function ModelDashboard({user,onLogout}){
 
 // ─── VIEWER DASHBOARD ───
 function ViewerDashboard({user,onLogout}){
-  var [tokens,setTokens]=useState(user.tokens||80);
+  var [tokens,setTokens]=useState(user.tokens||500);
   var [step,setStep]=useState("gallery");
   var [models,setModels]=useState([]);
   var [selectedModel,setSelectedModel]=useState(null);
@@ -728,6 +728,7 @@ function ViewerDashboard({user,onLogout}){
   var [errorMsg,setErrorMsg]=useState("");
   var [procMsg,setProcMsg]=useState("");
 
+  var [showTokenShop,setShowTokenShop]=useState(false);
   var PROC_MSGS=["Gesicht analysieren...","Video suchen...","Face-Swap auf GPU...","Fertigstellen..."];
 
   useEffect(()=>{
@@ -764,9 +765,63 @@ function ViewerDashboard({user,onLogout}){
   if(step==="gallery")return(
     <div style={S.page}><style>{css}</style>
       <NavBar user={user} onLogout={onLogout} tokens={tokens}/>
+      {/* TOKEN SHOP MODAL */}
+      {showTokenShop&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div className="fade-up" style={{...S.card,padding:32,width:"100%",maxWidth:480,boxShadow:"0 32px 80px rgba(0,0,0,.8)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+              <div style={{...S.display,fontSize:28}}>Token Shop</div>
+              <button onClick={()=>setShowTokenShop(false)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:20}}>✕</button>
+            </div>
+            {/* Free plan */}
+            <div style={{...S.card,padding:16,marginBottom:10,border:"1px solid rgba(255,255,255,0.1)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>🎁 Gratis Starter</div>
+                  <div style={{...S.mono,fontSize:11,color:"#5a5e6b"}}>500 Tokens einmalig</div>
+                </div>
+                <div style={{...S.mono,fontSize:13,color:"#22c55e",fontWeight:700}}>KOSTENLOS</div>
+              </div>
+            </div>
+            {/* Monthly plan */}
+            <div style={{...S.card,padding:16,marginBottom:10,border:"2px solid #f59e0b",background:"rgba(245,158,11,0.05)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>⭐ Monatsabo</div>
+                  <div style={{...S.mono,fontSize:11,color:"#5a5e6b"}}>1.000 Tokens / Monat</div>
+                  <div style={{...S.mono,fontSize:10,color:"#f59e0b",marginTop:4}}>BELIEBTESTE WAHL</div>
+                </div>
+                <button onClick={()=>alert("Stripe kommt bald!")} style={{padding:"10px 18px",background:"linear-gradient(135deg,#f59e0b,#d97706)",border:"none",borderRadius:10,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",color:"#000",fontSize:14}}>
+                  10 € / Monat
+                </button>
+              </div>
+            </div>
+            {/* Extra tokens */}
+            <div style={{...S.card,padding:16,border:"1px solid rgba(255,255,255,0.08)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>💎 Extra Tokens</div>
+                  <div style={{...S.mono,fontSize:11,color:"#5a5e6b"}}>2.000 Tokens einmalig</div>
+                </div>
+                <button onClick={()=>alert("Stripe kommt bald!")} style={{padding:"10px 18px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",color:"#eef0f6",fontSize:14}}>
+                  5 €
+                </button>
+              </div>
+            </div>
+            <div style={{...S.mono,fontSize:10,color:"#3a3d52",textAlign:"center",marginTop:16}}>
+              Zahlung via Stripe · Sicher & verschlüsselt · Jederzeit kündbar
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{maxWidth:900,margin:"0 auto",padding:"32px 16px"}}>
         <div className="fade-up">
-          <h1 style={{...S.display,fontSize:38,marginBottom:4}}>Wähle dein <span style={{color:"#f59e0b"}}>Model</span></h1>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4,flexWrap:"wrap",gap:12}}>
+            <h1 style={{...S.display,fontSize:38}}>Wähle dein <span style={{color:"#f59e0b"}}>Model</span></h1>
+            <button onClick={()=>setShowTokenShop(true)} style={{padding:"10px 18px",background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:700,color:"#f59e0b",fontSize:14,flexShrink:0}}>
+              🪙 Tokens kaufen
+            </button>
+          </div>
           <p style={{color:"#5a5e6b",fontSize:14,marginBottom:32}}>Verifizierte Models — deren Gesicht kommt in dein Video</p>
           {models.length===0?(
             <div style={{...S.card,padding:40,textAlign:"center"}}>
@@ -825,15 +880,29 @@ function ViewerDashboard({user,onLogout}){
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))",gap:16}}>
             {suggestions.map(video=>(
               <div key={video.id} className="card-hover" onClick={()=>{setSelectedVideo(video);setStep("unlock");}} style={{...S.card,overflow:"hidden"}}>
-                <div style={{position:"relative",height:160,overflow:"hidden"}}>
-                  <img src={video.thumb} alt={video.title} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                  <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)"}}/>
-                  <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"rgba(0,0,0,0.6)",borderRadius:30,width:52,height:52,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>▶️</div>
-                  <div style={{position:"absolute",bottom:10,left:12,right:12}}><div style={{fontWeight:700,fontSize:14}}>{video.title}</div><div style={{...S.mono,fontSize:10,color:"#aaa"}}>{formatDuration(video.duration)}</div></div>
-                  <div style={{position:"absolute",top:10,right:10,background:"rgba(245,158,11,0.9)",borderRadius:8,padding:"3px 8px",...S.mono,fontSize:10,color:"#000",fontWeight:700}}>5 SEK GRATIS</div>
+                <div style={{position:"relative",height:180,overflow:"hidden",background:"#000"}}>
+                  {/* Blurred video preview */}
+                  <video src={video.videoUrl} muted autoPlay loop playsInline
+                    style={{width:"100%",height:"100%",objectFit:"cover",filter:"blur(8px)",transform:"scale(1.1)"}}/>
+                  {/* Blur overlay */}
+                  <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)"}}/>
+                  {/* Lock icon */}
+                  <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center"}}>
+                    <div style={{fontSize:36,marginBottom:6}}>🔒</div>
+                    <div style={{...S.mono,fontSize:10,color:"#f59e0b",fontWeight:700,letterSpacing:2}}>GESPERRT</div>
+                  </div>
+                  {/* Title bottom */}
+                  <div style={{position:"absolute",bottom:10,left:12,right:12}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>{video.title}</div>
+                    <div style={{...S.mono,fontSize:10,color:"#aaa"}}>{formatDuration(video.duration)}</div>
+                  </div>
+                  {/* Sport tag */}
+                  <div style={{position:"absolute",top:10,left:10,background:"rgba(0,0,0,0.7)",borderRadius:8,padding:"3px 8px",...S.mono,fontSize:10,color:"#f59e0b",fontWeight:700}}>
+                    {SPORTS.find(s=>s.id===video.sport)?.emoji} {SPORTS.find(s=>s.id===video.sport)?.label}
+                  </div>
                 </div>
                 <div style={{padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={{...S.mono,fontSize:10,color:"#5a5e6b"}}>{SPORTS.find(s=>s.id===video.sport)?.emoji} {SPORTS.find(s=>s.id===video.sport)?.label}</div>
+                  <div style={{...S.mono,fontSize:10,color:"#5a5e6b"}}>Zum Freischalten klicken</div>
                   <div style={{...S.mono,fontSize:11,color:"#f59e0b",fontWeight:700}}>ab 50 Tokens</div>
                 </div>
               </div>
@@ -852,12 +921,15 @@ function ViewerDashboard({user,onLogout}){
           <button onClick={()=>setStep("suggestions")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
           <h1 style={{...S.display,fontSize:32,marginBottom:20}}>Video freischalten</h1>
           <div style={{...S.card,overflow:"hidden",marginBottom:20}}>
-            <div style={{position:"relative",height:200}}>
-              <img src={selectedVideo.thumb} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                <div style={{fontSize:48,marginBottom:8}}>▶️</div>
-                <div style={{...S.mono,fontSize:11,color:"#f59e0b"}}>5 SEKUNDEN VORSCHAU</div>
-                <div style={{fontWeight:700,fontSize:16,marginTop:4}}>{selectedVideo.title}</div>
+            <div style={{position:"relative",height:220,background:"#000"}}>
+              <video src={selectedVideo.videoUrl} muted autoPlay loop playsInline
+                style={{width:"100%",height:"100%",objectFit:"cover",filter:"blur(10px)",transform:"scale(1.1)"}}/>
+              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)",
+                display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                <div style={{fontSize:52,marginBottom:10}}>🔒</div>
+                <div style={{...S.mono,fontSize:12,color:"#f59e0b",letterSpacing:2,marginBottom:4}}>VIDEO GESPERRT</div>
+                <div style={{fontWeight:700,fontSize:18}}>{selectedVideo.title}</div>
+                <div style={{...S.mono,fontSize:11,color:"#aaa",marginTop:4}}>{formatDuration(selectedVideo.duration)}</div>
               </div>
             </div>
           </div>
