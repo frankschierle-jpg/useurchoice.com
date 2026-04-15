@@ -716,7 +716,7 @@ function ModelDashboard({user,onLogout}){
 
 // ─── VIEWER DASHBOARD ───
 function ViewerDashboard({user,onLogout}){
-  var [tokens,setTokens]=useState(user.tokens||500);
+  var [tokens,setTokens]=useState(500);
   var [step,setStep]=useState("gallery");
   var [models,setModels]=useState([]);
   var [selectedModel,setSelectedModel]=useState(null);
@@ -724,6 +724,7 @@ function ViewerDashboard({user,onLogout}){
   var [suggestions,setSuggestions]=useState([]);
   var [selectedVideo,setSelectedVideo]=useState(null);
   var [resultUrl,setResultUrl]=useState(null);
+  var [audioUrl,setAudioUrl]=useState(null);
   var [loading,setLoading]=useState(false);
   var [errorMsg,setErrorMsg]=useState("");
   var [procMsg,setProcMsg]=useState("");
@@ -771,14 +772,16 @@ function ViewerDashboard({user,onLogout}){
       clearInterval(interval);
       if(!res.ok){var err=await res.json();throw new Error(err.detail||"Fehler");}
       var data=await res.json();
-      setResultUrl(data.video_url);setTokens(t=>t-price);
+      setResultUrl(data.video_url);
+      setAudioUrl(data.audio_url||null);
+      setTokens(t=>t-price);
       await supabase.from("videos").insert({viewer_email:user.email,model_id:selectedModel.id,video_url:data.video_url,prompt,sport:data.sport,tokens_paid:price});
       await supabase.from("models").update({earnings:(selectedModel.earnings||0)+(price*0.9)}).eq("id",selectedModel.id);
     }catch(e){clearInterval(interval);setErrorMsg(e.message);}
     setLoading(false);
   }
 
-  function reset(){setStep("gallery");setSelectedModel(null);setPrompt("");setSuggestions([]);setSelectedVideo(null);setResultUrl(null);setErrorMsg("");}
+  function reset(){setStep("gallery");setSelectedModel(null);setPrompt("");setSuggestions([]);setSelectedVideo(null);setResultUrl(null);setAudioUrl(null);setErrorMsg("");}
 
   if(step==="gallery")return(
     <div style={S.page}><style>{css}</style>
@@ -982,7 +985,22 @@ function ViewerDashboard({user,onLogout}){
           ):resultUrl?(
             <div>
               <h2 style={{...S.display,fontSize:36,marginBottom:16}}>⭐ Dein Video ist fertig!</h2>
-              <video src={resultUrl} controls autoPlay loop style={{width:"100%",borderRadius:16,border:"1px solid rgba(255,255,255,0.08)",background:"#000",marginBottom:20}}/>
+              <div style={{position:"relative",marginBottom:20}}>
+                {resultUrl.endsWith(".jpg")||resultUrl.endsWith(".png")||resultUrl.endsWith(".jpeg")?(
+                  <img src={resultUrl} style={{width:"100%",borderRadius:16,border:"1px solid rgba(255,255,255,0.08)",display:"block"}}/>
+                ):(
+                  <video src={resultUrl} controls autoPlay loop style={{width:"100%",borderRadius:16,border:"1px solid rgba(255,255,255,0.08)",background:"#000"}}/>
+                )}
+              </div>
+              {audioUrl&&(
+                <div style={{...S.card,padding:16,marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{fontSize:24}}>🎵</div>
+                  <div style={{flex:1}}>
+                    <div style={{...S.mono,fontSize:10,color:"#f59e0b",marginBottom:4}}>PASSENDE MUSIK</div>
+                    <audio src={audioUrl} controls autoPlay loop style={{width:"100%",height:32}}/>
+                  </div>
+                </div>
+              )}
               <button onClick={reset} style={S.btn(true)}>← Neues Video erstellen</button>
             </div>
           ):(
