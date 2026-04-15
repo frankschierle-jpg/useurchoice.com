@@ -26,27 +26,29 @@ var FACE_ANGLES = [
 ];
 
 var ALL_POSES = [
-  "Hebe deine rechte Hand über den Kopf",
-  "Zeige ein Peace-Zeichen mit beiden Händen",
-  "Lege beide Hände auf die Wangen",
-  "Zeige einen Daumen hoch mit der linken Hand",
-  "Verschränke die Arme vor der Brust",
-  "Zeige drei Finger mit der rechten Hand",
-  "Lege eine Hand auf die Schulter",
-  "Zeige ein Herzzeichen mit beiden Händen",
-  "Hebe beide Arme seitlich an",
-  "Zeige eine Faust mit der rechten Hand",
-  "Tippe mit dem Finger auf deine Nase",
-  "Halte beide Hände vor dem Gesicht",
-  "Zeige einen Daumen runter mit rechts",
-  "Lege den Kopf schief nach rechts",
-  "Zeige fünf Finger mit der linken Hand",
-  "Strecke die Zunge heraus und hebe rechte Hand",
-  "Mache eine Pistole mit beiden Händen",
-  "Lege beide Hände auf den Kopf",
-  "Zeige ein Okay-Zeichen mit der rechten Hand",
-  "Hebe die linke Schulter an und zwinkere",
+  { text: "Daumen hoch mit der rechten Hand", hint: "Rechte Hand — Daumen nach oben zur Kamera", figure: "thumbsup" },
+  { text: "Peace-Zeichen mit der rechten Hand", hint: "Zeige- und Mittelfinger gestreckt, Richtung Kamera", figure: "peace" },
+  { text: "Drei Finger mit der rechten Hand", hint: "Daumen, Zeige- und Mittelfinger gestreckt", figure: "three_fingers" },
+  { text: "Faust mit der rechten Hand", hint: "Alle Finger geschlossen zur Faust, Richtung Kamera", figure: "fist" },
+  { text: "Okay-Zeichen mit der rechten Hand", hint: "Daumen und Zeigefinger bilden einen Kreis", figure: "okay" },
+  { text: "Fünf Finger mit der rechten Hand", hint: "Alle fünf Finger gespreizt zur Kamera zeigen", figure: "five_fingers" },
+  { text: "Zeigefinger auf die Nase", hint: "Rechter Zeigefinger berührt die Nasenspitze", figure: "point_nose" },
+  { text: "Rechte Hand auf die linke Schulter", hint: "Rechte Hand flach auf die gegenüberliegende Schulter", figure: "hand_shoulder" },
+  { text: "Daumen runter mit der rechten Hand", hint: "Rechte Hand — Daumen nach unten zeigen", figure: "thumbs_down" },
+  { text: "Mit der rechten Hand winken", hint: "Offene Hand zur Kamera — hin und her schwingen", figure: "wave" },
+  { text: "Peace-Zeichen mit der rechten Hand", hint: "Zeige- und Mittelfinger V-förmig nach oben", figure: "peace" },
+  { text: "Faust zur Kamera strecken", hint: "Rechte Faust direkt Richtung Kamera strecken", figure: "fist" },
+  { text: "Daumen hoch mit der rechten Hand", hint: "Klassischer Daumen hoch, Handrücken zur Kamera", figure: "thumbsup" },
+  { text: "Okay-Zeichen mit der rechten Hand", hint: "Kleiner Kreis aus Daumen und Zeigefinger", figure: "okay" },
+  { text: "Drei Finger spreizen mit rechts", hint: "Ring-, Mittel- und Zeigefinger gestreckt", figure: "three_fingers" },
+  { text: "Offene Hand winken", hint: "Alle Finger gespreizt, Hand seitlich bewegen", figure: "wave" },
+  { text: "Zeigefinger zeigt nach oben", hint: "Nur Zeigefinger gestreckt, gerade nach oben", figure: "peace" },
+  { text: "Rechte Hand auf Schulter legen", hint: "Flache Hand auf die linke Schulter tippen", figure: "hand_shoulder" },
+  { text: "Daumen runter zeigen", hint: "Daumen der rechten Hand nach unten strecken", figure: "thumbs_down" },
+  { text: "Fünf Finger spreizen", hint: "Alle Finger der rechten Hand maximal gespreizt", figure: "five_fingers" },
 ];
+
+
 
 var VIDEO_PREVIEWS = [
   { id:"v1", sport:"surf",  title:"Barrel Ride Bali",       thumb:"https://images.unsplash.com/photo-1502680390548-bdbac40f7154?w=400&q=80", duration:180 },
@@ -109,6 +111,158 @@ function NavBar({user,onLogout,tokens,earnings}){
         <span style={{...S.mono,fontSize:10,color:"#3a3d52"}}>{user?.email}</span>
         <button onClick={onLogout} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",color:"#555",padding:"5px 14px",borderRadius:8,cursor:"pointer",...S.mono,fontSize:10}}>Logout</button>
       </div>
+    </div>
+  );
+}
+
+// ─── STICK FIGURE POSES (SVG) ───
+function StickFigure({ pose }) {
+  var poses = {
+    thumbsup: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        {/* Body */}
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        {/* Legs */}
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        {/* Left arm down */}
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        {/* Right arm — thumbs up */}
+        <line x1="60" y1="70" x2="90" y2="60" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="90" y1="60" x2="100" y2="40" stroke="#f59e0b" strokeWidth="3"/>
+        <circle cx="100" cy="36" r="5" fill="#f59e0b"/>
+        {/* Thumb */}
+        <line x1="100" y1="40" x2="108" y2="32" stroke="#f59e0b" strokeWidth="4" strokeLinecap="round"/>
+      </svg>
+    ),
+    peace: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        {/* Right arm up with peace */}
+        <line x1="60" y1="70" x2="90" y2="55" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="90" y1="55" x2="95" y2="35" stroke="#f59e0b" strokeWidth="3"/>
+        {/* Two fingers */}
+        <line x1="95" y1="35" x2="90" y2="18" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="95" y1="35" x2="102" y2="20" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+      </svg>
+    ),
+    three_fingers: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="90" y2="55" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="90" y1="55" x2="95" y2="35" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="95" y1="35" x2="88" y2="18" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="95" y1="35" x2="96" y2="17" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="95" y1="35" x2="104" y2="20" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+      </svg>
+    ),
+    fist: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="90" y2="60" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="90" y1="60" x2="105" y2="55" stroke="#f59e0b" strokeWidth="3"/>
+        <rect x="100" y="48" width="16" height="14" rx="4" fill="#f59e0b"/>
+      </svg>
+    ),
+    okay: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="90" y2="55" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="90" y1="55" x2="100" y2="40" stroke="#f59e0b" strokeWidth="3"/>
+        <circle cx="104" cy="34" r="7" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="108" y1="28" x2="114" y2="20" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+      </svg>
+    ),
+    five_fingers: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="95" y2="55" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="95" y1="55" x2="100" y2="35" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="100" y1="35" x2="94" y2="18" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="100" y1="35" x2="100" y2="16" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="100" y1="35" x2="107" y2="18" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="100" y1="35" x2="112" y2="22" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+        <line x1="100" y1="35" x2="90" y2="20" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
+      </svg>
+    ),
+    point_nose: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="90" y2="60" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="90" y1="60" x2="78" y2="34" stroke="#f59e0b" strokeWidth="3"/>
+        <circle cx="75" cy="30" r="3" fill="#f59e0b"/>
+      </svg>
+    ),
+    hand_shoulder: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        {/* Right arm crossing to left shoulder */}
+        <line x1="60" y1="70" x2="85" y2="65" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="85" y1="65" x2="45" y2="58" stroke="#f59e0b" strokeWidth="3"/>
+        <circle cx="42" cy="57" r="5" fill="#f59e0b"/>
+      </svg>
+    ),
+    thumbs_down: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="90" y2="75" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="90" y1="75" x2="105" y2="80" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="105" y1="75" x2="112" y2="88" stroke="#f59e0b" strokeWidth="4" strokeLinecap="round"/>
+      </svg>
+    ),
+    wave: (
+      <svg viewBox="0 0 120 200" width="120" height="200">
+        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="60" y1="70" x2="95" y2="50" stroke="#f59e0b" strokeWidth="3"/>
+        <line x1="95" y1="50" x2="105" y2="30" stroke="#f59e0b" strokeWidth="3"/>
+        {/* Open hand */}
+        <line x1="105" y1="30" x2="99" y2="15" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="105" y1="30" x2="105" y2="14" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="105" y1="30" x2="111" y2="16" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="105" y1="30" x2="115" y2="21" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
+      </svg>
+    ),
+  };
+  return(
+    <div style={{display:"flex",justifyContent:"center",alignItems:"center",padding:"16px 0"}}>
+      {poses[pose] || poses["thumbsup"]}
     </div>
   );
 }
@@ -218,14 +372,28 @@ function AuthScreen({onLogin}){
     setLoading(false);
   }
 
-  async function registerModelFinal(verifyPhoto){
+  async function registerModelFinal(verifyBlob){
     setLoading(true);setError("");
     try{
-      // 1. Supabase Auth Account erstellen
+      // 1. KI-Pose-Abgleich
+      var fd0=new FormData();
+      fd0.append("photo",verifyBlob,"verify.jpg");
+      fd0.append("pose_text",pose.text);
+      fd0.append("email",email);
+      var poseRes=await fetch(`${BACKEND_URL}/model/verify-pose`,{method:"POST",body:fd0});
+      var poseData=await poseRes.json();
+      
+      if(!poseData.verified){
+        setError(`❌ Pose nicht erkannt: ${poseData.reason} — Bitte nochmal versuchen!`);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Supabase Auth Account erstellen
       var {error:e}=await supabase.auth.signUp({email,password:pw,options:{emailRedirectTo:window.location.origin}});
       if(e&&!e.message.includes("already registered"))throw e;
 
-      // 2. Frontalfoto auf Cloudinary hochladen
+      // 3. Frontalfoto auf Cloudinary hochladen
       var faceUrl="";
       var fd=new FormData();
       fd.append("photo",photos[profileIdx].blob,"face.jpg");
@@ -234,14 +402,15 @@ function AuthScreen({onLogin}){
       var uploadData=await res.json();
       faceUrl=uploadData.photo_url||"";
 
-      // 3. Verifikationsfoto hochladen
-      var fd2=new FormData();
-      fd2.append("photo",verifyPhoto);
-      fd2.append("email",email);
-      await fetch(`${BACKEND_URL}/model/verify`,{method:"POST",body:fd2});
-
       // 4. In Supabase speichern
-      await supabase.from("models").upsert({email,name:name||email.split("@")[0],face_url:faceUrl,sports,verified:false,earnings:0});
+      await supabase.from("models").upsert({
+        email,
+        name:name||email.split("@")[0],
+        face_url:faceUrl,
+        sports,
+        verified:false,
+        earnings:0
+      });
 
       setScreen("register-model-done");
     }catch(e){setError(e.message||"Fehler");}
@@ -369,21 +538,22 @@ function AuthScreen({onLogin}){
           <div style={{...S.card,padding:28,marginBottom:14}}>
             <div style={{...S.label,marginBottom:16}}>VERIFIKATIONS-POSE</div>
             <div style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:14,padding:24,textAlign:"center",marginBottom:20}}>
-              <div style={{fontSize:44,marginBottom:10}}>🤳</div>
-              <div style={{fontSize:17,fontWeight:700,color:"#f59e0b",lineHeight:1.5}}>{pose}</div>
+              <StickFigure pose={pose.figure}/>
+              <div style={{fontSize:18,fontWeight:700,color:"#f59e0b",marginBottom:8,marginTop:8}}>{pose.text}</div>
+              <div style={{fontSize:13,color:"#8892a4",lineHeight:1.6}}>{pose.hint}</div>
             </div>
             <p style={{color:"#5a5e6b",fontSize:13,marginBottom:20,lineHeight:1.6}}>
-              Mache ein Foto von dir in genau dieser Pose mit der Kamera.
-              Das bestätigt dass du wirklich du bist.
+              Halte die <strong style={{color:"#f59e0b"}}>linke Hand</strong> frei für die Kamera.
+              Zeige die Pose mit der <strong style={{color:"#f59e0b"}}>rechten Hand</strong> — dann Foto machen.
             </p>
-            {error&&<div style={{...S.mono,fontSize:11,color:"#f87171",marginBottom:16,padding:"8px 12px",background:"rgba(248,113,113,0.08)",borderRadius:8}}>{error}</div>}
+            {error&&<div style={{...S.mono,fontSize:12,color:"#f87171",marginBottom:16,padding:"10px 14px",background:"rgba(248,113,113,0.08)",borderRadius:8,lineHeight:1.6}}>{error}</div>}
             {loading?(
               <div style={{textAlign:"center",padding:"20px 0"}}>
                 <div className="spin" style={{fontSize:40,display:"inline-block",marginBottom:12}}>⭐</div>
-                <div style={{...S.mono,fontSize:12,color:"#f59e0b"}}>Wird gespeichert...</div>
+                <div style={{...S.mono,fontSize:12,color:"#f59e0b"}}>KI prüft deine Pose...</div>
               </div>
             ):(
-              <VerifyCamera onCapture={blob=>registerModelFinal(blob)}/>
+              <VerifyCamera onCapture={blob=>registerModelFinal(blob)} poseText={pose.text}/>
             )}
           </div>
         </div>
