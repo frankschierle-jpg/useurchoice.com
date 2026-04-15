@@ -113,6 +113,69 @@ function NavBar({user,onLogout,tokens,earnings}){
   );
 }
 
+// ─── VERIFIKATIONS-KAMERA ───
+function VerifyCamera({onCapture}){
+  var [started,setStarted]=useState(false);
+  var [captured,setCaptured]=useState(null);
+  var videoRef=useRef(null);
+  var streamRef=useRef(null);
+
+  async function startCamera(){
+    try{
+      var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}});
+      streamRef.current=stream;setStarted(true);
+      setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=stream;},150);
+    }catch(e){alert("Kamera-Erlaubnis benötigt!");}
+  }
+
+  function stopCamera(){if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}}
+
+  function takePhoto(){
+    var video=videoRef.current;
+    if(!video||video.videoWidth===0){alert("Kamera noch nicht bereit.");return;}
+    var canvas=document.createElement("canvas");
+    canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+    canvas.getContext("2d").drawImage(video,0,0);
+    canvas.toBlob(blob=>{
+      setCaptured(URL.createObjectURL(blob));
+      stopCamera();
+      onCapture(blob);
+    },"image/jpeg",0.92);
+  }
+
+  if(captured)return(
+    <div style={{textAlign:"center"}}>
+      <img src={captured} alt="" style={{width:160,height:160,borderRadius:80,objectFit:"cover",border:"3px solid #22c55e",display:"block",margin:"0 auto 12px"}}/>
+      <div style={{...S.mono,fontSize:11,color:"#22c55e",marginBottom:12}}>✅ Foto aufgenommen — wird verarbeitet...</div>
+    </div>
+  );
+
+  if(!started)return(
+    <button onClick={startCamera} style={{...S.btn(true),background:"linear-gradient(135deg,#f59e0b,#d97706)"}}>
+      📷 Kamera öffnen & Verifikationsfoto machen
+    </button>
+  );
+
+  return(
+    <div style={{textAlign:"center"}}>
+      <div style={{position:"relative",display:"inline-block",marginBottom:14}}>
+        <video ref={videoRef} autoPlay playsInline muted style={{width:"100%",maxWidth:300,borderRadius:14,border:"2px solid #f59e0b",display:"block"}}/>
+        <div style={{position:"absolute",top:10,left:10,right:10,background:"rgba(0,0,0,0.75)",borderRadius:8,padding:"6px 10px",...S.mono,fontSize:11,color:"#f59e0b",textAlign:"center"}}>
+          Nimm die Pose ein und klick dann auf Foto aufnehmen
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+        <button onClick={takePhoto} style={{padding:"12px 28px",background:"#f59e0b",border:"none",borderRadius:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,color:"#000"}}>
+          📸 Foto aufnehmen
+        </button>
+        <button onClick={()=>{stopCamera();setStarted(false);}} style={{padding:"12px 16px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,color:"#666",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── AUTH SCREEN ───
 function AuthScreen({onLogin}){
   var [screen,setScreen]=useState("choose"); // choose | login | register-viewer | register-model-email | register-model-photos | register-model-pose | register-model-done | check-email
@@ -310,8 +373,8 @@ function AuthScreen({onLogin}){
               <div style={{fontSize:17,fontWeight:700,color:"#f59e0b",lineHeight:1.5}}>{pose}</div>
             </div>
             <p style={{color:"#5a5e6b",fontSize:13,marginBottom:20,lineHeight:1.6}}>
-              Mache ein Foto von dir in genau dieser Pose. Das bestätigt dass du wirklich du bist.
-              Nach dem Upload erhältst du eine Bestätigungsmail.
+              Mache ein Foto von dir in genau dieser Pose mit der Kamera.
+              Das bestätigt dass du wirklich du bist.
             </p>
             {error&&<div style={{...S.mono,fontSize:11,color:"#f87171",marginBottom:16,padding:"8px 12px",background:"rgba(248,113,113,0.08)",borderRadius:8}}>{error}</div>}
             {loading?(
@@ -320,10 +383,7 @@ function AuthScreen({onLogin}){
                 <div style={{...S.mono,fontSize:12,color:"#f59e0b"}}>Wird gespeichert...</div>
               </div>
             ):(
-              <label style={{display:"block",padding:"14px 0",background:"linear-gradient(135deg,#f59e0b,#d97706)",borderRadius:12,fontWeight:700,cursor:"pointer",color:"#000",fontSize:15,textAlign:"center"}}>
-                📸 Verifikationsfoto hochladen & Registrierung abschließen
-                <input type="file" accept="image/*" onChange={e=>e.target.files[0]&&registerModelFinal(e.target.files[0])} style={{display:"none"}}/>
-              </label>
+              <VerifyCamera onCapture={blob=>registerModelFinal(blob)}/>
             )}
           </div>
         </div>
