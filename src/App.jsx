@@ -1,1034 +1,374 @@
-import { useState, useRef, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import os
+import uuid
+import base64
+import random
+import re
+import cloudinary
+import cloudinary.uploader
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import replicate
+import httpx
 
-var BACKEND_URL = "https://useurchoice-backend.onrender.com";
-var SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
-var SUPABASE_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
-var supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+)
 
-var SPORTS = [
-  { id: "surf",  label: "Surfen",        emoji: "🏄", color: "#0891b2" },
-  { id: "climb", label: "Klettern",      emoji: "🧗", color: "#ea580c" },
-  { id: "ski",   label: "Skifahren",     emoji: "⛷️",  color: "#7c3aed" },
-  { id: "bike",  label: "Mountainbiken", emoji: "🚵", color: "#16a34a" },
-  { id: "dive",  label: "Tauchen",       emoji: "🤿", color: "#0284c7" },
-  { id: "skate", label: "Skateboarden",  emoji: "🛹", color: "#db2777" },
-  { id: "box",   label: "Boxen",         emoji: "🥊", color: "#dc2626" },
-  { id: "yoga",  label: "Yoga",          emoji: "🧘", color: "#d97706" },
-];
+app = FastAPI(title="StarSwap Backend")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-var FACE_ANGLES = [
-  { id: "front", label: "Frontal", icon: "😐", instruction: "Schau direkt in die Kamera" },
-  { id: "left",  label: "Links",   icon: "👈", instruction: "Kopf leicht nach links drehen" },
-  { id: "right", label: "Rechts",  icon: "👉", instruction: "Kopf leicht nach rechts drehen" },
-  { id: "up",    label: "Hoch",    icon: "☝️",  instruction: "Kinn leicht anheben" },
-  { id: "down",  label: "Runter",  icon: "👇", instruction: "Kinn leicht senken" },
-];
-
-var ALL_POSES = [
-  { text: "Daumen hoch mit der rechten Hand", hint: "Rechte Hand — Daumen nach oben zur Kamera", figure: "thumbsup" },
-  { text: "Peace-Zeichen mit der rechten Hand", hint: "Zeige- und Mittelfinger gestreckt, Richtung Kamera", figure: "peace" },
-  { text: "Drei Finger mit der rechten Hand", hint: "Daumen, Zeige- und Mittelfinger gestreckt", figure: "three_fingers" },
-  { text: "Faust mit der rechten Hand", hint: "Alle Finger geschlossen zur Faust, Richtung Kamera", figure: "fist" },
-  { text: "Okay-Zeichen mit der rechten Hand", hint: "Daumen und Zeigefinger bilden einen Kreis", figure: "okay" },
-  { text: "Fünf Finger mit der rechten Hand", hint: "Alle fünf Finger gespreizt zur Kamera zeigen", figure: "five_fingers" },
-  { text: "Zeigefinger auf die Nase", hint: "Rechter Zeigefinger berührt die Nasenspitze", figure: "point_nose" },
-  { text: "Rechte Hand auf die linke Schulter", hint: "Rechte Hand flach auf die gegenüberliegende Schulter", figure: "hand_shoulder" },
-  { text: "Daumen runter mit der rechten Hand", hint: "Rechte Hand — Daumen nach unten zeigen", figure: "thumbs_down" },
-  { text: "Mit der rechten Hand winken", hint: "Offene Hand zur Kamera — hin und her schwingen", figure: "wave" },
-  { text: "Peace-Zeichen mit der rechten Hand", hint: "Zeige- und Mittelfinger V-förmig nach oben", figure: "peace" },
-  { text: "Faust zur Kamera strecken", hint: "Rechte Faust direkt Richtung Kamera strecken", figure: "fist" },
-  { text: "Daumen hoch mit der rechten Hand", hint: "Klassischer Daumen hoch, Handrücken zur Kamera", figure: "thumbsup" },
-  { text: "Okay-Zeichen mit der rechten Hand", hint: "Kleiner Kreis aus Daumen und Zeigefinger", figure: "okay" },
-  { text: "Drei Finger spreizen mit rechts", hint: "Ring-, Mittel- und Zeigefinger gestreckt", figure: "three_fingers" },
-  { text: "Offene Hand winken", hint: "Alle Finger gespreizt, Hand seitlich bewegen", figure: "wave" },
-  { text: "Zeigefinger zeigt nach oben", hint: "Nur Zeigefinger gestreckt, gerade nach oben", figure: "peace" },
-  { text: "Rechte Hand auf Schulter legen", hint: "Flache Hand auf die linke Schulter tippen", figure: "hand_shoulder" },
-  { text: "Daumen runter zeigen", hint: "Daumen der rechten Hand nach unten strecken", figure: "thumbs_down" },
-  { text: "Fünf Finger spreizen", hint: "Alle Finger der rechten Hand maximal gespreizt", figure: "five_fingers" },
-];
-
-
-
-var VIDEO_PREVIEWS = [
-  { id:"v1", sport:"surf",  title:"Barrel Ride Bali",       thumb:"https://images.unsplash.com/photo-1502680390548-bdbac40f7154?w=400&q=80", duration:180, videoUrl:"https://videos.pexels.com/video-files/1918465/1918465-hd_1920_1080_30fps.mp4" },
-  { id:"v2", sport:"surf",  title:"Big Wave Nazaré",        thumb:"https://images.unsplash.com/photo-1509914398892-963f53e6e2f1?w=400&q=80", duration:90,  videoUrl:"https://videos.pexels.com/video-files/2499611/2499611-hd_1920_1080_30fps.mp4" },
-  { id:"v3", sport:"ski",   title:"Powder Run Chamonix",    thumb:"https://images.unsplash.com/photo-1565992441121-4367c2967103?w=400&q=80", duration:300, videoUrl:"https://videos.pexels.com/video-files/3551954/3551954-hd_1920_1080_30fps.mp4" },
-  { id:"v4", sport:"climb", title:"El Capitan Free Solo",   thumb:"https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400&q=80", duration:420, videoUrl:"https://videos.pexels.com/video-files/4992801/4992801-hd_1920_1080_30fps.mp4" },
-  { id:"v5", sport:"box",   title:"Ring Sparring Berlin",   thumb:"https://images.unsplash.com/photo-1517438322307-e67111335449?w=400&q=80", duration:60,  videoUrl:"https://videos.pexels.com/video-files/4761429/4761429-hd_1920_1080_30fps.mp4" },
-  { id:"v6", sport:"yoga",  title:"Sunrise Flow Bali",      thumb:"https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&q=80", duration:600, videoUrl:"https://videos.pexels.com/video-files/3997927/3997927-hd_1920_1080_30fps.mp4" },
-  { id:"v7", sport:"dive",  title:"Korallenriff Malediven", thumb:"https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&q=80", duration:360, videoUrl:"https://videos.pexels.com/video-files/3535473/3535473-hd_1920_1080_30fps.mp4" },
-  { id:"v8", sport:"bike",  title:"Downhill Whistler",      thumb:"https://images.unsplash.com/photo-1544191696-102dbdaeeaa0?w=400&q=80", duration:240, videoUrl:"https://videos.pexels.com/video-files/5752729/5752729-hd_1920_1080_30fps.mp4" },
-  { id:"v9", sport:"skate", title:"Venice Beach Halfpipe",  thumb:"https://images.unsplash.com/photo-1564296786786-a4dd73e51086?w=400&q=80", duration:120, videoUrl:"https://videos.pexels.com/video-files/4792453/4792453-hd_1920_1080_30fps.mp4" },
-];
-
-function getTokenPrice(s){if(s<=60)return 50;if(s<=180)return 100;if(s<=300)return 300;return 500;}
-function formatDuration(s){if(s<60)return s+" Sek";return Math.floor(s/60)+" Min"+(s%60>0?" "+s%60+"s":"");}
-function detectSport(text){
-  var t=text.toLowerCase();
-  var m={surf:["surf","welle","ozean","beach","bali","hawaii","meer"],ski:["ski","schnee","alpen","piste","winter","snowboard"],climb:["kletter","fels","berg","bouldern"],bike:["bike","fahrrad","downhill","trail","mtb"],box:["box","ring","kampf","boxen","sparring"],yoga:["yoga","meditation","flow"],dive:["tauch","unterwasser","koralle"],skate:["skate","halfpipe","skateboard"]};
-  for(var sport in m){if(m[sport].some(k=>t.includes(k)))return sport;}
-  return null;
-}
-function getVideoSuggestions(prompt){
-  var sport=detectSport(prompt);
-  var pool=sport?VIDEO_PREVIEWS.filter(v=>v.sport===sport):VIDEO_PREVIEWS;
-  if(pool.length<3)pool=[...pool,...VIDEO_PREVIEWS.filter(v=>v.sport!==sport)];
-  return [...pool].sort(()=>Math.random()-.5).slice(0,3);
+SPORT_VIDEOS = {
+    "surf":  "https://videos.pexels.com/video-files/1918465/1918465-hd_1920_1080_30fps.mp4",
+    "ski":   "https://videos.pexels.com/video-files/3551954/3551954-hd_1920_1080_30fps.mp4",
+    "climb": "https://videos.pexels.com/video-files/4992801/4992801-hd_1920_1080_30fps.mp4",
+    "bike":  "https://videos.pexels.com/video-files/5752729/5752729-hd_1920_1080_30fps.mp4",
+    "box":   "https://videos.pexels.com/video-files/4761429/4761429-hd_1920_1080_30fps.mp4",
+    "yoga":  "https://videos.pexels.com/video-files/3997927/3997927-hd_1920_1080_30fps.mp4",
+    "dive":  "https://videos.pexels.com/video-files/3535473/3535473-hd_1920_1080_30fps.mp4",
+    "skate": "https://videos.pexels.com/video-files/4792453/4792453-hd_1920_1080_30fps.mp4",
 }
 
-var css=`
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0;}body{background:#08090f;}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .fade-up{animation:fadeUp .5s cubic-bezier(.22,1,.36,1) both}
-  .spin{animation:spin 1.2s linear infinite}
-  input,textarea{outline:none;}input::placeholder,textarea::placeholder{color:#1e2030;}
-  ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:#1e2030;border-radius:2px;}
-  .card-hover{transition:all .25s ease;cursor:pointer;}.card-hover:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.5);}
-`;
-
-var S={
-  page:{minHeight:"100vh",background:"#08090f",color:"#eef0f6",fontFamily:"'DM Sans',sans-serif"},
-  display:{fontFamily:"'Bebas Neue',cursive",letterSpacing:"0.05em"},
-  mono:{fontFamily:"'JetBrains Mono',monospace"},
-  card:{background:"#0d0e17",border:"1px solid rgba(255,255,255,0.06)",borderRadius:20},
-  btn:(active,color)=>({width:"100%",padding:"15px 0",borderRadius:12,border:"none",cursor:active?"pointer":"not-allowed",background:active?(color||"linear-gradient(135deg,#f59e0b,#d97706)"):"rgba(255,255,255,0.03)",color:active?"#000":"#333",fontWeight:700,fontSize:15,fontFamily:"'DM Sans',sans-serif",transition:"all .2s",boxShadow:active?"0 4px 24px rgba(245,158,11,0.2)":"none"}),
-  label:{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#3a3d52",letterSpacing:3},
-  input:{width:"100%",background:"#0d0e17",border:"1px solid rgba(255,255,255,0.06)",borderRadius:12,padding:"13px 16px",color:"#eef0f6",fontSize:14,fontFamily:"'DM Sans',sans-serif"},
-};
-
-function Logo({size=24}){return <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:size,letterSpacing:"0.05em"}}><span style={{color:"#f59e0b",textShadow:"0 0 20px rgba(245,158,11,0.5)"}}>STAR</span><span style={{color:"#ffffff",textShadow:"0 0 20px rgba(255,255,255,0.3)"}}>SWAP</span></span>;}
-
-function NavBar({user,onLogout,tokens,earnings}){
-  return(
-    <div style={{position:"sticky",top:0,zIndex:50,background:"rgba(8,9,15,0.92)",backdropFilter:"blur(20px)",borderBottom:"1px solid rgba(255,255,255,0.05)",padding:"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <Logo size={22}/>
-      <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-        {tokens!==undefined&&<div style={{background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.2)",padding:"4px 14px",borderRadius:20,...S.mono,fontSize:11,color:"#f59e0b",fontWeight:600}}>🪙 {tokens} Tokens</div>}
-        {earnings!==undefined&&<div style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.2)",padding:"4px 14px",borderRadius:20,...S.mono,fontSize:11,color:"#22c55e",fontWeight:600}}>💰 {earnings.toFixed(1)} Tokens</div>}
-        <span style={{...S.mono,fontSize:10,color:"#3a3d52"}}>{user?.email}</span>
-        <button onClick={onLogout} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.06)",color:"#555",padding:"5px 14px",borderRadius:8,cursor:"pointer",...S.mono,fontSize:10}}>Logout</button>
-      </div>
-    </div>
-  );
+SPORT_KEYWORDS = {
+    "surf":  ["surf","surfen","welle","wellen","ozean","meer","strand","beach","bali","hawaii","wellenreiten","brandung"],
+    "ski":   ["ski","skifahren","schnee","alpen","piste","winter","snowboard","tiefschnee","powder","chamonix"],
+    "climb": ["klettern","kletter","fels","felsen","berg","bouldern","wand","yosemite","dolomiten"],
+    "bike":  ["bike","biken","mountainbike","mtb","fahrrad","downhill","trail","whistler"],
+    "box":   ["boxen","boxer","ring","kampf","sparring","knockout","punch","schlag"],
+    "yoga":  ["yoga","meditation","entspannung","dehnung","stretching","flow","pose"],
+    "dive":  ["tauchen","tauch","unterwasser","koralle","riff","scuba","schnorcheln","malediven"],
+    "skate": ["skate","skateboard","skateboarden","halfpipe","trick","ollie","kickflip"],
 }
 
-// ─── POSE PHOTOS ───
-var POSE_PHOTOS = {
-  thumbsup:      "https://images.unsplash.com/photo-1589710751893-f9a6770ad71b?w=300&q=80",
-  peace:         "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300&q=80",
-  three_fingers: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&q=80",
-  fist:          "https://images.unsplash.com/photo-1517438322307-e67111335449?w=300&q=80",
-  okay:          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=80",
-  five_fingers:  "https://images.unsplash.com/photo-1504593811423-6dd665756598?w=300&q=80",
-  point_nose:    "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=300&q=80",
-  hand_shoulder: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=300&q=80",
-  thumbs_down:   "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&q=80",
-  wave:          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&q=80",
-};
+def detect_sport(text: str) -> str:
+    t = text.lower()
+    scores = {}
+    for sport, keywords in SPORT_KEYWORDS.items():
+        scores[sport] = sum(1 for kw in keywords if kw in t)
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 0 else "surf"
 
-function PosePhoto({ pose }) {
-  var url = POSE_PHOTOS[pose] || POSE_PHOTOS["thumbsup"];
-  return (
-    <div style={{ position:"relative", width:160, height:160, margin:"0 auto", borderRadius:80,
-                  overflow:"hidden", border:"3px solid #f59e0b" }}>
-      <img src={url} alt="Pose Beispiel" style={{ width:"100%", height:"100%", objectFit:"cover",
-        objectPosition:"top" }} />
-      <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)" }}/>
-      <div style={{ position:"absolute", bottom:8, left:0, right:0, textAlign:"center",
-        fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#fff", letterSpacing:1 }}>
-        BEISPIEL-POSE
-      </div>
-    </div>
-  );
-}
+async def build_pexels_query(prompt: str, sport: str) -> str:
+    """Nutzt Gemini um den besten Pexels-Suchbegriff zu generieren."""
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    
+    if gemini_key:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                    json={"contents": [{"parts": [{"text": f"""Convert this German text to a short English Pexels video search query (max 4 words).
+Text: "{prompt}"
+Sport: {sport}
+Reply ONLY with the search query, nothing else."""}]}]}
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    query = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    query = re.sub(r'[^\w\s]', '', query)
+                    query = ' '.join(query.split()[:4])
+                    print(f"Gemini query: {query}")
+                    return query
+        except Exception as e:
+            print(f"Gemini error: {e}")
+    
+    # Fallback
+    sport_queries = {
+        "surf": "surfing waves ocean", "ski": "skiing snow mountain",
+        "climb": "rock climbing cliff", "bike": "mountain biking trail",
+        "box": "boxing training fight", "yoga": "yoga meditation",
+        "dive": "scuba diving underwater", "skate": "skateboarding tricks",
+    }
+    return sport_queries.get(sport, f"{sport} action sport")
 
-// ─── VERIFIKATIONS-KAMERA MIT MEDIAPIPE ───
-function VerifyCamera({onCapture, poseText}){
-  var [started,setStarted]=useState(false);
-  var [captured,setCaptured]=useState(null);
-  var [handDetected,setHandDetected]=useState(false);
-  var [status,setStatus]=useState("Kamera starten um Pose zu zeigen");
-  var [mpLoaded,setMpLoaded]=useState(false);
-  var videoRef=useRef(null);
-  var streamRef=useRef(null);
-  var canvasRef=useRef(null);
-  var handsRef=useRef(null);
-  var rafRef=useRef(null);
+@app.get("/")
+def root():
+    return {"status": "StarSwap Backend ✅"}
 
-  useEffect(()=>{
-    // MediaPipe Hands laden
-    var script1=document.createElement("script");
-    script1.src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
-    script1.onload=()=>{
-      var script2=document.createElement("script");
-      script2.src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
-      script2.onload=()=>setMpLoaded(true);
-      document.head.appendChild(script2);
-    };
-    document.head.appendChild(script1);
-    return()=>{if(rafRef.current)cancelAnimationFrame(rafRef.current);};
-  },[]);
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
-  async function startCamera(){
-    try{
-      var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:640,height:480}});
-      streamRef.current=stream;
-      setStarted(true);
-      setTimeout(()=>{
-        if(videoRef.current){
-          videoRef.current.srcObject=stream;
-          videoRef.current.onloadeddata=()=>{
-            if(mpLoaded && window.Hands) initMediaPipe();
-            else detectLoop();
-          };
+@app.post("/model/upload-photo")
+async def upload_model_photo(photo: UploadFile = File(...), email: str = Form(...)):
+    try:
+        photo_bytes = await photo.read()
+        result = cloudinary.uploader.upload(
+            photo_bytes,
+            public_id=f"models/{email.replace('@','_').replace('.','_')}/face_{uuid.uuid4().hex[:8]}",
+        )
+        return JSONResponse({"success": True, "photo_url": result["secure_url"]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/model/verify")
+async def verify_model(photo: UploadFile = File(...), email: str = Form(...)):
+    try:
+        photo_bytes = await photo.read()
+        result = cloudinary.uploader.upload(
+            photo_bytes,
+            public_id=f"verified/{email.replace('@','_').replace('.','_')}_{uuid.uuid4().hex[:8]}",
+        )
+        return JSONResponse({"success": True, "verified": True, "photo_url": result["secure_url"]})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/videos/search")
+async def search_videos(prompt: str, count: int = 3):
+    try:
+        sport = detect_sport(prompt)
+        search_query = await build_pexels_query(prompt, sport)
+        
+        pexels_key = os.environ.get("PEXELS_API_KEY", "")
+        if not pexels_key:
+            raise Exception("Pexels API Key fehlt")
+        
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(
+                "https://api.pexels.com/videos/search",
+                headers={"Authorization": pexels_key},
+                params={"query": search_query, "per_page": 15, "size": "medium", "orientation": "landscape"}
+            )
+            
+            if resp.status_code != 200:
+                raise Exception(f"Pexels {resp.status_code}")
+            
+            videos = resp.json().get("videos", [])
+            
+            if not videos:
+                resp2 = await client.get(
+                    "https://api.pexels.com/videos/search",
+                    headers={"Authorization": pexels_key},
+                    params={"query": sport + " sport action", "per_page": 15}
+                )
+                videos = resp2.json().get("videos", [])
+            
+            random.shuffle(videos)
+            result = []
+            for v in videos[:count]:
+                files = v.get("video_files", [])
+                hd = next((f for f in files if f.get("quality") == "hd" and f.get("width", 0) >= 1280), None)
+                sd = next((f for f in files if f.get("quality") == "sd"), None)
+                best = hd or sd or (files[0] if files else None)
+                if not best:
+                    continue
+                raw = v.get("url", "").split("/")[-2]
+                title = re.sub(r'-\d+$', '', raw).replace("-", " ").title()
+                if len(title) < 3:
+                    title = search_query.title()
+                result.append({
+                    "id": str(v["id"]),
+                    "title": title,
+                    "thumb": v.get("image", ""),
+                    "videoUrl": best.get("link", ""),
+                    "duration": v.get("duration", 30),
+                    "sport": sport,
+                })
+            
+            return JSONResponse({"success": True, "videos": result, "sport": sport, "query": search_query})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/faceswap")
+async def faceswap(prompt: str = Form(...), face_url: str = Form(...)):
+    try:
+        print(f"face_url: {face_url}")
+        print(f"prompt: {prompt}")
+        
+        if not face_url or face_url.strip() == "":
+            raise HTTPException(status_code=400, detail="Kein Gesichtsfoto! Bitte als Model neu registrieren.")
+        
+        sport = detect_sport(prompt)
+        
+        # Pexels Video holen
+        video_url = SPORT_VIDEOS.get(sport, SPORT_VIDEOS["surf"])
+        try:
+            pexels_key = os.environ.get("PEXELS_API_KEY", "")
+            if pexels_key:
+                search_query = await build_pexels_query(prompt, sport)
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.get(
+                        "https://api.pexels.com/videos/search",
+                        headers={"Authorization": pexels_key},
+                        params={"query": search_query, "per_page": 5, "size": "medium"}
+                    )
+                    if resp.status_code == 200:
+                        videos = resp.json().get("videos", [])
+                        if videos:
+                            v = random.choice(videos[:5])
+                            files = v.get("video_files", [])
+                            hd = next((f for f in files if f.get("quality")=="hd" and f.get("width",0)>=1280), None)
+                            sd = next((f for f in files if f.get("quality")=="sd"), None)
+                            best = hd or sd or (files[0] if files else None)
+                            if best:
+                                video_url = best.get("link", video_url)
+        except Exception as pe:
+            print(f"Pexels error: {pe}")
+        
+        print(f"video_url: {video_url}")
+        
+        print(f"Starting face swap with face_url: {face_url}")
+        print(f"Video URL: {video_url}")
+        
+        # Cloudinary URL zu PNG konvertieren
+        if "cloudinary.com" in face_url and "/image/upload/" in face_url:
+            parts = face_url.split("/image/upload/")
+            face_url_png = parts[0] + "/image/upload/f_png/" + parts[1]
+            # Extension ersetzen
+            if "." in face_url_png.split("/")[-1]:
+                base = face_url_png.rsplit(".", 1)[0]
+                face_url_png = base + ".png"
+        else:
+            face_url_png = face_url
+            
+        print(f"face_url_png: {face_url_png}")
+        
+        # Sport-Szene Prompt auf Englisch übersetzen für Kling
+        sport_prompts = {
+            "surf": "The person in the reference image is surfing massive ocean waves in Bali, wearing a wetsuit, riding a surfboard, dramatic ocean spray, sunny day, action sports photography",
+            "ski": "The person in the reference image is skiing down a steep snowy mountain, wearing ski gear and helmet, powder snow flying, alpine scenery, fast action sports",
+            "climb": "The person in the reference image is rock climbing on a dramatic vertical cliff face, wearing climbing harness and helmet, reaching for a hold, mountain backdrop, extreme sport",
+            "bike": "The person in the reference image is mountain biking downhill on a forest trail, wearing helmet and protective gear, jumping over a rocky section, action sport",
+            "box": "The person in the reference image is boxing in a professional ring, wearing boxing gloves and shorts, throwing a powerful punch, dramatic lighting, sports action",
+            "yoga": "The person in the reference image is doing advanced yoga poses on a peaceful beach at sunrise, wearing yoga clothes, serene atmosphere",
+            "dive": "The person in the reference image is scuba diving underwater in a tropical coral reef, wearing diving gear, surrounded by colorful fish and coral",
+            "skate": "The person in the reference image is skateboarding in an urban skatepark, wearing protective gear, performing a trick on a halfpipe, action sports",
         }
-      },150);
-    }catch(e){alert("Kamera-Erlaubnis benötigt!");}
-  }
+        
+        # Gemini baut aus Schlagworten einen perfekten Kling-Prompt
+        base_prompt = sport_prompts.get(sport, f"person doing {sport}, action sport, cinematic")
+        video_prompt = base_prompt
+        try:
+            gemini_key = os.environ.get("GEMINI_API_KEY", "")
+            if gemini_key:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.post(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_key}",
+                        json={"contents": [{"parts": [{"text": f"""You are a video prompt engineer for Kling AI (image-to-video model).
+                        
+The user uploaded a face photo as reference image. Create a detailed English prompt that:
+1. Starts with "The person in the reference image is..."
+2. Places them in an action sport scene
+3. Includes all details from the user's keywords
 
-  function initMediaPipe(){
-    try{
-      var hands=new window.Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-      hands.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:0.6,minTrackingConfidence:0.5});
-      hands.onResults(results=>{
-        var detected=results.multiHandLandmarks&&results.multiHandLandmarks.length>0;
-        setHandDetected(detected);
-        setStatus(detected?"✅ Hand erkannt! Jetzt Foto aufnehmen":"🤚 Zeige deine rechte Hand zur Kamera");
-      });
-      handsRef.current=hands;
+User keywords: "{prompt}"
+Detected sport: {sport}
+Base scene: {base_prompt}
 
-      async function detect(){
-        if(videoRef.current&&videoRef.current.readyState>=2){
-          await hands.send({image:videoRef.current});
-        }
-        rafRef.current=setTimeout(detect,200);
-      }
-      detect();
-    }catch(e){
-      console.error("MediaPipe Fehler:",e);
-      detectLoop();
-    }
-  }
+Rules:
+- Max 40 words
+- Very specific about the sport action
+- Include location, lighting, mood from keywords
+- Make it cinematic and dynamic
+- Reply ONLY with the prompt, nothing else"""}]}]}
+                    )
+                    if resp.status_code == 200:
+                        video_prompt = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        # Anführungszeichen entfernen falls vorhanden
+                        video_prompt = video_prompt.strip('"').strip("'")
+                        print(f"Gemini video prompt: {video_prompt}")
+        except Exception as ge:
+            print(f"Gemini prompt error: {ge}")
+            video_prompt = base_prompt
 
-  function detectLoop(){
-    // Fallback: einfach Hand-Bewegung simulieren
-    setHandDetected(true);
-    setStatus("✅ Bereit! Nimm die Pose ein und mache ein Foto");
-  }
-
-  function stopCamera(){
-    if(rafRef.current)clearTimeout(rafRef.current);
-    if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
-  }
-
-  function takePhoto(){
-    var video=videoRef.current;
-    if(!video||video.videoWidth===0){alert("Kamera noch nicht bereit.");return;}
-    var canvas=document.createElement("canvas");
-    canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-    canvas.getContext("2d").drawImage(video,0,0);
-    canvas.toBlob(blob=>{
-      setCaptured(URL.createObjectURL(blob));
-      stopCamera();
-      onCapture(blob);
-    },"image/jpeg",0.92);
-  }
-
-  if(captured)return(
-    <div style={{textAlign:"center"}}>
-      <img src={captured} alt="" style={{width:160,height:160,borderRadius:80,objectFit:"cover",border:"3px solid #22c55e",display:"block",margin:"0 auto 12px"}}/>
-      <div style={{...S.mono,fontSize:11,color:"#22c55e",marginBottom:12}}>✅ Foto aufgenommen — wird gespeichert...</div>
-    </div>
-  );
-
-  if(!started)return(
-    <button onClick={startCamera} style={{...S.btn(true),background:"linear-gradient(135deg,#f59e0b,#d97706)"}}>
-      📷 Kamera öffnen & Pose zeigen
-    </button>
-  );
-
-  return(
-    <div style={{textAlign:"center"}}>
-      {/* Status */}
-      <div style={{...S.mono,fontSize:12,color:handDetected?"#22c55e":"#f59e0b",marginBottom:12,
-        padding:"8px 14px",background:handDetected?"rgba(34,197,94,0.08)":"rgba(245,158,11,0.08)",
-        borderRadius:10,border:`1px solid ${handDetected?"rgba(34,197,94,0.2)":"rgba(245,158,11,0.2)"}`}}>
-        {status}
-      </div>
-
-      {/* Video */}
-      <div style={{position:"relative",display:"inline-block",marginBottom:14}}>
-        <video ref={videoRef} autoPlay playsInline muted style={{width:"100%",maxWidth:300,
-          borderRadius:14,border:`2px solid ${handDetected?"#22c55e":"#f59e0b"}`,display:"block",
-          transform:"scaleX(-1)"}}/>
-        <canvas ref={canvasRef} style={{display:"none"}}/>
-        {handDetected&&(
-          <div style={{position:"absolute",top:10,right:10,background:"rgba(34,197,94,0.9)",
-            borderRadius:20,padding:"4px 10px",...S.mono,fontSize:10,color:"#000",fontWeight:700}}>
-            ✋ Hand
-          </div>
-        )}
-      </div>
-
-      {/* Buttons */}
-      <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-        <button onClick={takePhoto} disabled={!handDetected}
-          style={{padding:"12px 28px",
-            background:handDetected?"#f59e0b":"rgba(255,255,255,0.04)",
-            border:"none",borderRadius:11,fontWeight:700,
-            cursor:handDetected?"pointer":"not-allowed",
-            fontFamily:"'DM Sans',sans-serif",fontSize:15,
-            color:handDetected?"#000":"#555"}}>
-          {handDetected?"📸 Foto aufnehmen":"Hand zeigen..."}
-        </button>
-        <button onClick={()=>{stopCamera();setStarted(false);setHandDetected(false);}}
-          style={{padding:"12px 16px",background:"rgba(255,255,255,0.04)",
-            border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,
-            color:"#666",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-          ✕
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── AUTH SCREEN ───
-function AuthScreen({onLogin}){
-  var [screen,setScreen]=useState("choose"); // choose | login | register-viewer | register-model-email | register-model-photos | register-model-pose | register-model-done | check-email
-  var [email,setEmail]=useState("");
-  var [pw,setPw]=useState("");
-  var [name,setName]=useState("");
-  var [sports,setSports]=useState([]);
-  var [photos,setPhotos]=useState([]);
-  var [profileIdx,setProfileIdx]=useState(0);
-  var [pose]=useState(()=>ALL_POSES[Math.floor(Math.random()*ALL_POSES.length)]);
-  var [loading,setLoading]=useState(false);
-  var [error,setError]=useState("");
-
-  function toggleSport(id){setSports(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);}
-
-  async function loginSubmit(){
-    setLoading(true);setError("");
-    try{
-      var {data,error:e}=await supabase.auth.signInWithPassword({email,password:pw});
-      if(e)throw e;
-      var {data:modelData}=await supabase.from("models").select("*").eq("email",email).single();
-      var role=modelData?"model":"viewer";
-      onLogin({email,role,tokens:80,earnings:modelData?.earnings||0,id:data.user.id,modelData});
-    }catch(e){
-      var msg=e.message||"Fehler";
-      if(msg.includes("Invalid login credentials"))msg="E-Mail oder Passwort falsch";
-      if(msg.includes("Email not confirmed"))msg="Bitte zuerst die Bestätigungs-Mail anklicken";
-      setError(msg);
-    }
-    setLoading(false);
-  }
-
-  async function registerViewer(){
-    setLoading(true);setError("");
-    try{
-      var {error:e}=await supabase.auth.signUp({email,password:pw,options:{emailRedirectTo:window.location.origin}});
-      if(e)throw e;
-      setScreen("check-email");
-    }catch(e){setError(e.message||"Fehler");}
-    setLoading(false);
-  }
-
-  async function sendConfirmationMail(){
-    setLoading(true);setError("");
-    try{
-      // 1. Frontalfoto auf Cloudinary hochladen
-      var faceUrl="";
-      try{
-        var fd=new FormData();
-        fd.append("photo",photos[profileIdx].blob,"face.jpg");
-        fd.append("email",email);
-        var res=await fetch(`${BACKEND_URL}/model/upload-photo`,{method:"POST",body:fd});
-        var uploadData=await res.json();
-        faceUrl=uploadData.photo_url||"";
-      }catch(uploadErr){console.error("Upload fehler:",uploadErr);}
-
-      // 2. In Supabase speichern (noch nicht verifiziert)
-      await supabase.from("models").upsert({
-        email,
-        name:name||email.split("@")[0],
-        face_url:faceUrl,
-        sports,
-        verified:false,
-        earnings:0
-      });
-
-      // 3. Supabase Auth Account erstellen + Bestätigungsmail
-      var {error:e}=await supabase.auth.signUp({
-        email,
-        password:pw,
-        options:{emailRedirectTo:`${window.location.origin}?verify_model=true`}
-      });
-      if(e&&!e.message.includes("already registered"))throw e;
-
-      setScreen("register-model-check-email");
-    }catch(e){
-      var msg=e.message||"Fehler";
-      if(msg.includes("already registered"))msg="Diese E-Mail ist bereits registriert — bitte einloggen";
-      setError(msg);
-    }
-    setLoading(false);
-  }
-
-  async function registerModelFinal(verifyBlob){
-    setLoading(true);setError("");
-    try{
-      // Verifikationsfoto hochladen
-      var fd=new FormData();
-      fd.append("photo",verifyBlob,"verify.jpg");
-      fd.append("email",email);
-      await fetch(`${BACKEND_URL}/model/verify`,{method:"POST",body:fd});
-
-      // Als verifiziert markieren
-      await supabase.from("models").update({verified:true}).eq("email",email);
-
-      setScreen("register-model-done");
-    }catch(e){setError(e.message||"Fehler");}
-    setLoading(false);
-  }
-
-  // CHOOSE
-  if(screen==="choose")return(
-    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, #08090f 60%)"}}>
-      <style>{css}</style>
-      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:440,boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
-        <div style={{textAlign:"center",marginBottom:36}}><Logo size={44}/><div style={{...S.mono,fontSize:11,color:"#3a3d52",marginTop:8}}>Be the star of every video</div></div>
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <button onClick={()=>setScreen("login")} style={{...S.btn(true),background:"linear-gradient(135deg,#f59e0b,#d97706)"}}>Einloggen</button>
-          <button onClick={()=>setScreen("register-viewer")} style={{...S.btn(true,"rgba(255,255,255,0.06)"),color:"#eef0f6",boxShadow:"none"}}>👁️ Als Viewer registrieren</button>
-          <button onClick={()=>setScreen("register-model-email")} style={{...S.btn(true,"rgba(245,158,11,0.1)"),color:"#f59e0b",border:"1px solid rgba(245,158,11,0.3)",boxShadow:"none"}}>⭐ Als Model registrieren</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // LOGIN
-  if(screen==="login")return(
-    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, #08090f 60%)"}}>
-      <style>{css}</style>
-      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:420,boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
-        <button onClick={()=>setScreen("choose")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
-        <div style={{textAlign:"center",marginBottom:28}}><Logo size={36}/></div>
-        <div style={{marginBottom:14}}><div style={{...S.label,marginBottom:8}}>E-MAIL</div><input style={S.input} value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@beispiel.de"/></div>
-        <div style={{marginBottom:24}}><div style={{...S.label,marginBottom:8}}>PASSWORT</div><input style={S.input} type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••"/></div>
-        {error&&<div style={{...S.mono,fontSize:11,color:"#f87171",marginBottom:16,padding:"8px 12px",background:"rgba(248,113,113,0.08)",borderRadius:8}}>{error}</div>}
-        <button onClick={loginSubmit} style={S.btn(email&&pw&&!loading)}>{loading?"⏳ Einloggen...":"Einloggen →"}</button>
-      </div>
-    </div>
-  );
-
-  // REGISTER VIEWER
-  if(screen==="register-viewer")return(
-    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, #08090f 60%)"}}>
-      <style>{css}</style>
-      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:420,boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
-        <button onClick={()=>setScreen("choose")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
-        <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#3a3d52",marginTop:6}}>👁️ Viewer Registrierung</div></div>
-        <div style={{marginBottom:14}}><div style={{...S.label,marginBottom:8}}>E-MAIL</div><input style={S.input} value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@beispiel.de"/></div>
-        <div style={{marginBottom:24}}><div style={{...S.label,marginBottom:8}}>PASSWORT</div><input style={S.input} type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Mindestens 6 Zeichen"/></div>
-        {error&&<div style={{...S.mono,fontSize:11,color:"#f87171",marginBottom:16,padding:"8px 12px",background:"rgba(248,113,113,0.08)",borderRadius:8}}>{error}</div>}
-        <button onClick={registerViewer} style={S.btn(email&&pw.length>=6&&!loading)}>{loading?"⏳ Wird erstellt...":"Account erstellen → Bestätigungsmail"}</button>
-        <div style={{...S.mono,fontSize:10,color:"#3a3d52",textAlign:"center",marginTop:12}}>Du erhältst eine Bestätigungsmail</div>
-      </div>
-    </div>
-  );
-
-  // REGISTER MODEL — EMAIL + PASSWORT
-  if(screen==="register-model-email")return(
-    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, #08090f 60%)"}}>
-      <style>{css}</style>
-      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:420,boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
-        <button onClick={()=>setScreen("choose")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
-        <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#f59e0b",marginTop:6}}>⭐ Model Registrierung — Schritt 1/3</div></div>
-        <div style={{marginBottom:14}}><div style={{...S.label,marginBottom:8}}>DEIN NAME</div><input style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="z.B. Alex M."/></div>
-        <div style={{marginBottom:14}}><div style={{...S.label,marginBottom:8}}>E-MAIL</div><input style={S.input} value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@beispiel.de"/></div>
-        <div style={{marginBottom:24}}><div style={{...S.label,marginBottom:8}}>PASSWORT</div><input style={S.input} type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Mindestens 6 Zeichen"/></div>
-        <button onClick={()=>email&&pw.length>=6&&setScreen("register-model-photos")} style={S.btn(email&&pw.length>=6)}>Weiter → Fotos aufnehmen</button>
-      </div>
-    </div>
-  );
-
-  // REGISTER MODEL — 5 FOTOS
-  if(screen==="register-model-photos")return(
-    <div style={S.page}><style>{css}</style>
-      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <button onClick={()=>setScreen("register-model-email")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
-          <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#f59e0b",marginTop:6}}>⭐ Model Registrierung — Schritt 2/3</div></div>
-          <div style={{...S.card,padding:24,marginBottom:16}}>
-            <div style={{...S.label,marginBottom:16}}>5 GESICHTSFOTOS AUFNEHMEN</div>
-            <FaceCapture userEmail={email} onComplete={p=>{setPhotos(p);setScreen("register-model-sports");}}/>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // REGISTER MODEL — SPORTARTEN
-  if(screen==="register-model-sports")return(
-    <div style={S.page}><style>{css}</style>
-      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#f59e0b",marginTop:6}}>⭐ Model Registrierung — Schritt 2/3</div></div>
-          <div style={{...S.card,padding:20,marginBottom:14}}>
-            <div style={{...S.label,marginBottom:12}}>PROFILBILD WÄHLEN</div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {photos.map((p,i)=>(
-                <div key={i} onClick={()=>setProfileIdx(i)} style={{cursor:"pointer",position:"relative"}}>
-                  <img src={p.url} alt="" style={{width:72,height:72,borderRadius:36,objectFit:"cover",border:`3px solid ${profileIdx===i?"#f59e0b":"rgba(255,255,255,0.06)"}`,transition:"all .15s"}}/>
-                  {profileIdx===i&&<div style={{position:"absolute",bottom:0,right:0,background:"#f59e0b",borderRadius:10,width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>⭐</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{...S.card,padding:20,marginBottom:14}}>
-            <div style={{...S.label,marginBottom:14}}>SPORTARTEN FREIGEBEN</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-              {SPORTS.map(s=>(
-                <button key={s.id} onClick={()=>toggleSport(s.id)} style={{padding:"9px 16px",borderRadius:20,border:`1px solid ${sports.includes(s.id)?s.color:"rgba(255,255,255,0.06)"}`,background:sports.includes(s.id)?`${s.color}18`:"transparent",color:sports.includes(s.id)?s.color:"#555",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:13}}>
-                  {s.emoji} {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button onClick={()=>sports.length>0&&sendConfirmationMail()} style={S.btn(sports.length>0&&!loading)}>
-            {loading?"⏳ Wird gespeichert...":sports.length>0?"📧 Bestätigungsmail senden →":"Mindestens 1 Sportart wählen"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // REGISTER MODEL — CHECK EMAIL
-  if(screen==="register-model-check-email")return(
-    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
-      <style>{css}</style>
-      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:440,textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
-        <div style={{fontSize:56,marginBottom:16}}>📧</div>
-        <Logo size={32}/>
-        <h2 style={{fontSize:20,fontWeight:700,margin:"16px 0 8px"}}>Bestätigungsmail gesendet!</h2>
-        <p style={{color:"#5a5e6b",fontSize:14,lineHeight:1.7,marginBottom:24}}>
-          Wir haben dir einen Link an <strong style={{color:"#f59e0b"}}>{email}</strong> geschickt.
-          Klick darauf und kehre dann hierher zurück für das Verifikationsfoto.
-        </p>
-        <div style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)",
-          borderRadius:12,padding:16,...S.mono,fontSize:11,color:"#f59e0b",marginBottom:24,lineHeight:1.6}}>
-          Nach dem Klick auf den Link → zurück zu StarSwap → Verifikationsfoto machen
-        </div>
-        <button onClick={()=>setScreen("register-model-pose")} style={S.btn(true)}>
-          ✅ Mail bestätigt — Weiter zum Verifikationsfoto →
-        </button>
-      </div>
-    </div>
-  );
-
-  // REGISTER MODEL — VERIFIKATIONS-POSE
-  if(screen==="register-model-pose")return(
-    <div style={S.page}><style>{css}</style>
-      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#f59e0b",marginTop:6}}>⭐ Model Registrierung — Schritt 3/3</div></div>
-          <div style={{...S.card,padding:28,marginBottom:14}}>
-            <div style={{...S.label,marginBottom:16}}>VERIFIKATIONS-POSE</div>
-            <div style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:14,padding:24,textAlign:"center",marginBottom:20}}>
-              <PosePhoto pose={pose.figure}/>
-              <div style={{fontSize:18,fontWeight:700,color:"#f59e0b",marginBottom:8,marginTop:8}}>{pose.text}</div>
-              <div style={{fontSize:13,color:"#8892a4",lineHeight:1.6}}>{pose.hint}</div>
-            </div>
-            <p style={{color:"#5a5e6b",fontSize:13,marginBottom:20,lineHeight:1.6}}>
-              Halte die <strong style={{color:"#f59e0b"}}>linke Hand</strong> frei für die Kamera.
-              Zeige die Pose mit der <strong style={{color:"#f59e0b"}}>rechten Hand</strong> — dann Foto machen.
-            </p>
-            {error&&<div style={{...S.mono,fontSize:12,color:"#f87171",marginBottom:16,padding:"10px 14px",background:"rgba(248,113,113,0.08)",borderRadius:8,lineHeight:1.6}}>{error}</div>}
-            {loading?(
-              <div style={{textAlign:"center",padding:"20px 0"}}>
-                <div className="spin" style={{fontSize:40,display:"inline-block",marginBottom:12}}>⭐</div>
-                <div style={{...S.mono,fontSize:12,color:"#f59e0b"}}>KI prüft deine Pose...</div>
-              </div>
-            ):(
-              <VerifyCamera onCapture={blob=>registerModelFinal(blob)} poseText={pose.text}/>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // REGISTER MODEL — FERTIG
-  if(screen==="register-model-done")return(
-    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
-      <style>{css}</style>
-      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:440,textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
-        <div style={{fontSize:56,marginBottom:16}}>🎉</div>
-        <Logo size={32}/>
-        <h2 style={{fontSize:20,fontWeight:700,margin:"16px 0 8px"}}>Registrierung fast abgeschlossen!</h2>
-        <p style={{color:"#5a5e6b",fontSize:14,lineHeight:1.7,marginBottom:24}}>
-          Wir haben dir eine Bestätigungsmail an <strong style={{color:"#f59e0b"}}>{email}</strong> geschickt.
-          Klick auf den Link in der Mail um dein Profil zu aktivieren.
-        </p>
-        <div style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:12,padding:16,...S.mono,fontSize:11,color:"#f59e0b",marginBottom:24}}>
-          Nach Bestätigung wirst du von uns freigeschaltet und kannst Tokens verdienen.
-        </div>
-        <button onClick={()=>setScreen("login")} style={S.btn(true)}>Zum Login →</button>
-      </div>
-    </div>
-  );
-
-  // CHECK EMAIL
-  if(screen==="check-email")return(
-    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
-      <style>{css}</style>
-      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:440,textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
-        <div style={{fontSize:56,marginBottom:16}}>📧</div>
-        <Logo size={32}/>
-        <h2 style={{fontSize:20,fontWeight:700,margin:"16px 0 8px"}}>Bestätigungsmail gesendet!</h2>
-        <p style={{color:"#5a5e6b",fontSize:14,lineHeight:1.7,marginBottom:24}}>
-          Wir haben dir einen Link an <strong style={{color:"#f59e0b"}}>{email}</strong> geschickt.
-          Klick darauf um deinen Account zu aktivieren.
-        </p>
-        <button onClick={()=>setScreen("login")} style={S.btn(true)}>Zum Login →</button>
-      </div>
-    </div>
-  );
-}
-
-// ─── 5 FOTOS KAMERA ───
-function FaceCapture({onComplete,userEmail}){
-  var [currentAngle,setCurrentAngle]=useState(0);
-  var [photos,setPhotos]=useState([]);
-  var [started,setStarted]=useState(false);
-  var [uploading,setUploading]=useState(false);
-  var videoRef=useRef(null);
-  var streamRef=useRef(null);
-
-  async function startCamera(){
-    try{
-      var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}});
-      streamRef.current=stream;setStarted(true);
-      setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=stream;},150);
-    }catch(e){alert("Kamera-Erlaubnis benötigt!");}
-  }
-  function stopCamera(){if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}}
-  async function captureFrame(){
-    var video=videoRef.current;
-    if(!video||video.videoWidth===0){alert("Kamera noch nicht bereit.");return;}
-    var canvas=document.createElement("canvas");
-    canvas.width=video.videoWidth;canvas.height=video.videoHeight;
-    canvas.getContext("2d").drawImage(video,0,0);
-    canvas.toBlob(async blob=>{
-      var url=URL.createObjectURL(blob);
-      var newPhotos=[...photos,{blob,url,angle:FACE_ANGLES[currentAngle]}];
-      setPhotos(newPhotos);
-      if(currentAngle===0){
-        setUploading(true);
-        try{
-          var fd=new FormData();fd.append("photo",blob,"face.jpg");fd.append("email",userEmail);
-          var res=await fetch(`${BACKEND_URL}/model/upload-photo`,{method:"POST",body:fd});
-          var data=await res.json();
-          newPhotos[0].cloudinaryUrl=data.photo_url;
-        }catch(e){console.error(e);}
-        setUploading(false);
-      }
-      if(currentAngle<FACE_ANGLES.length-1){setCurrentAngle(currentAngle+1);}
-      else{stopCamera();onComplete(newPhotos);}
-    },"image/jpeg",0.92);
-  }
-  var angle=FACE_ANGLES[currentAngle];
-  return(
-    <div style={{textAlign:"center"}}>
-      <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:20}}>
-        {FACE_ANGLES.map((a,i)=>(
-          <div key={a.id} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-            <div style={{width:52,height:52,borderRadius:26,background:i<photos.length?"#22c55e":i===currentAngle?"rgba(245,158,11,0.15)":"rgba(255,255,255,0.03)",border:i===currentAngle?"2px solid #f59e0b":i<photos.length?"2px solid #22c55e":"2px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,overflow:"hidden"}}>
-              {i<photos.length?<img src={photos[i].url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:a.icon}
-            </div>
-            <span style={{...S.mono,fontSize:9,color:i===currentAngle?"#f59e0b":"#3a3d52"}}>{a.label}</span>
-          </div>
-        ))}
-      </div>
-      {uploading&&<div style={{...S.mono,fontSize:11,color:"#f59e0b",marginBottom:12}}>⏳ Foto wird gespeichert...</div>}
-      {!started?(
-        <div>
-          <div style={{fontSize:52,marginBottom:12}}>{angle.icon}</div>
-          <div style={{fontWeight:700,fontSize:17,marginBottom:6}}>Foto {currentAngle+1} von 5: <span style={{color:"#f59e0b"}}>{angle.label}</span></div>
-          <div style={{color:"#5a5e6b",fontSize:13,marginBottom:20}}>{angle.instruction}</div>
-          <button onClick={startCamera} style={{...S.btn(true),width:"auto",padding:"12px 36px"}}>📷 Kamera starten</button>
-        </div>
-      ):(
-        <div>
-          <div style={{position:"relative",display:"inline-block",marginBottom:14}}>
-            <video ref={videoRef} autoPlay playsInline muted style={{width:"100%",maxWidth:300,borderRadius:14,border:"2px solid #f59e0b",display:"block"}}/>
-            <div style={{position:"absolute",top:10,left:10,right:10,background:"rgba(0,0,0,0.75)",borderRadius:8,padding:"6px 10px",...S.mono,fontSize:11,color:"#f59e0b",textAlign:"center"}}>{angle.icon} {angle.instruction}</div>
-          </div>
-          <div style={{fontWeight:700,fontSize:14,marginBottom:14,color:"#f59e0b"}}>Foto {currentAngle+1} von 5 — {angle.label}</div>
-          <button onClick={captureFrame} disabled={uploading} style={{padding:"12px 32px",background:uploading?"rgba(255,255,255,0.04)":"#f59e0b",border:"none",borderRadius:11,fontWeight:700,cursor:uploading?"not-allowed":"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,color:"#000"}}>
-            {uploading?"⏳ Warten...":"📸 Jetzt aufnehmen"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── MODEL DASHBOARD ───
-function ModelDashboard({user,onLogout}){
-  var [earnings,setEarnings]=useState(user.earnings||0);
-  var modelData=user.modelData;
-  return(
-    <div style={S.page}><style>{css}</style>
-      <NavBar user={user} onLogout={onLogout} earnings={earnings}/>
-      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <h1 style={{...S.display,fontSize:36,marginBottom:4}}>Dein Model-Dashboard</h1>
-          <p style={{color:"#5a5e6b",fontSize:13,marginBottom:24}}>Willkommen zurück, {modelData?.name||user.email.split("@")[0]}!</p>
-          <div style={{...S.card,padding:24,marginBottom:14,display:"flex",alignItems:"center",gap:20}}>
-            {modelData?.face_url?(
-              <img src={modelData.face_url} alt="" style={{width:80,height:80,borderRadius:40,objectFit:"cover",border:"3px solid #f59e0b",flexShrink:0}}/>
-            ):(
-              <div style={{width:80,height:80,borderRadius:40,background:"rgba(245,158,11,0.1)",border:"3px solid #f59e0b",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,flexShrink:0}}>👤</div>
-            )}
-            <div>
-              <div style={{fontWeight:700,fontSize:18,marginBottom:4}}>{modelData?.name||user.email.split("@")[0]}</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                {(modelData?.sports||[]).map(s=>{var sp=SPORTS.find(x=>x.id===s);return sp?<span key={s} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:`${sp.color}18`,color:sp.color,fontWeight:600}}>{sp.emoji} {sp.label}</span>:null;})}
-              </div>
-              <div style={{...S.mono,fontSize:10,color:modelData?.verified?"#22c55e":"#f59e0b",marginTop:6}}>{modelData?.verified?"✅ Verifiziert":"⏳ Warte auf Freischaltung"}</div>
-            </div>
-          </div>
-          <div style={{...S.card,padding:24,textAlign:"center"}}>
-            <div style={{...S.mono,fontSize:10,color:"#3a3d52",marginBottom:8}}>DEIN GUTHABEN</div>
-            <div style={{...S.display,fontSize:48,color:"#22c55e"}}>💰 {earnings.toFixed(1)}</div>
-            <div style={{...S.mono,fontSize:11,color:"#5a5e6b",marginTop:4}}>Tokens · {(earnings*0.10).toFixed(2)} € · Auszahlung ab 100 Tokens</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── VIEWER DASHBOARD ───
-function ViewerDashboard({user,onLogout}){
-  var [tokens,setTokens]=useState(500);
-  var [step,setStep]=useState("gallery");
-  var [models,setModels]=useState([]);
-  var [selectedModel,setSelectedModel]=useState(null);
-  var [prompt,setPrompt]=useState("");
-  var [suggestions,setSuggestions]=useState([]);
-  var [selectedVideo,setSelectedVideo]=useState(null);
-  var [resultUrl,setResultUrl]=useState(null);
-  var [audioUrl,setAudioUrl]=useState(null);
-  var [loading,setLoading]=useState(false);
-  var [errorMsg,setErrorMsg]=useState("");
-  var [procMsg,setProcMsg]=useState("");
-
-  var [showTokenShop,setShowTokenShop]=useState(false);
-  var PROC_MSGS=["Gesicht analysieren...","Video suchen...","Face-Swap auf GPU...","Fertigstellen..."];
-
-  useEffect(()=>{
-    async function loadModels(){
-      var {data,error}=await supabase.from("models").select("*").eq("verified",true);
-      if(!error&&data)setModels(data);
-    }
-    loadModels();
-  },[]);
-
-  async function searchVideos(){
-    setLoading(true);
-    try{
-      var res=await fetch(`${BACKEND_URL}/videos/search?prompt=${encodeURIComponent(prompt)}&count=3`);
-      if(!res.ok)throw new Error("Video-Suche fehlgeschlagen");
-      var data=await res.json();
-      if(data.videos&&data.videos.length>0){
-        setSuggestions(data.videos);
-      } else {
-        // Fallback auf lokale Videos
-        setSuggestions(getVideoSuggestions(prompt));
-      }
-    }catch(e){
-      console.error("Pexels Fehler:",e);
-      setSuggestions(getVideoSuggestions(prompt));
-    }
-    setLoading(false);
-    setStep("suggestions");
-  }
-
-  async function generateAndUnlock(durationSeconds){
-    var price=getTokenPrice(durationSeconds);
-    if(tokens<price){alert(`Nicht genug Tokens! Brauchst ${price}, hast ${tokens}.`);return;}
-    setStep("result");setLoading(true);
-    var idx=0;setProcMsg(PROC_MSGS[0]);
-    var interval=setInterval(()=>{idx=Math.min(idx+1,PROC_MSGS.length-1);setProcMsg(PROC_MSGS[idx]);},5000);
-    try{
-      var fd=new FormData();fd.append("prompt",prompt);fd.append("face_url",selectedModel.face_url);
-      var res=await fetch(`${BACKEND_URL}/faceswap`,{method:"POST",body:fd});
-      clearInterval(interval);
-      if(!res.ok){var err=await res.json();throw new Error(err.detail||"Fehler");}
-      var data=await res.json();
-      setResultUrl(data.video_url);
-      setAudioUrl(data.audio_url||null);
-      setTokens(t=>t-price);
-      await supabase.from("videos").insert({viewer_email:user.email,model_id:selectedModel.id,video_url:data.video_url,prompt,sport:data.sport,tokens_paid:price});
-      await supabase.from("models").update({earnings:(selectedModel.earnings||0)+(price*0.9)}).eq("id",selectedModel.id);
-    }catch(e){clearInterval(interval);setErrorMsg(e.message);}
-    setLoading(false);
-  }
-
-  function reset(){setStep("gallery");setSelectedModel(null);setPrompt("");setSuggestions([]);setSelectedVideo(null);setResultUrl(null);setAudioUrl(null);setErrorMsg("");}
-
-  if(step==="gallery")return(
-    <div style={S.page}><style>{css}</style>
-      <NavBar user={user} onLogout={onLogout} tokens={tokens}/>
-      {/* TOKEN SHOP MODAL */}
-      {showTokenShop&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div className="fade-up" style={{...S.card,padding:32,width:"100%",maxWidth:480,boxShadow:"0 32px 80px rgba(0,0,0,.8)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-              <div style={{...S.display,fontSize:28}}>Token Shop</div>
-              <button onClick={()=>setShowTokenShop(false)} style={{background:"none",border:"none",color:"#555",cursor:"pointer",fontSize:20}}>✕</button>
-            </div>
-            {/* Free plan */}
-            <div style={{...S.card,padding:16,marginBottom:10,border:"1px solid rgba(255,255,255,0.1)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>🎁 Gratis Starter</div>
-                  <div style={{...S.mono,fontSize:11,color:"#5a5e6b"}}>500 Tokens einmalig</div>
-                </div>
-                <div style={{...S.mono,fontSize:13,color:"#22c55e",fontWeight:700}}>KOSTENLOS</div>
-              </div>
-            </div>
-            {/* Monthly plan */}
-            <div style={{...S.card,padding:16,marginBottom:10,border:"2px solid #f59e0b",background:"rgba(245,158,11,0.05)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>⭐ Monatsabo</div>
-                  <div style={{...S.mono,fontSize:11,color:"#5a5e6b"}}>1.000 Tokens / Monat</div>
-                  <div style={{...S.mono,fontSize:10,color:"#f59e0b",marginTop:4}}>BELIEBTESTE WAHL</div>
-                </div>
-                <button onClick={()=>alert("Stripe kommt bald!")} style={{padding:"10px 18px",background:"linear-gradient(135deg,#f59e0b,#d97706)",border:"none",borderRadius:10,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",color:"#000",fontSize:14}}>
-                  10 € / Monat
-                </button>
-              </div>
-            </div>
-            {/* Extra tokens */}
-            <div style={{...S.card,padding:16,border:"1px solid rgba(255,255,255,0.08)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:15,marginBottom:2}}>💎 Extra Tokens</div>
-                  <div style={{...S.mono,fontSize:11,color:"#5a5e6b"}}>2.000 Tokens einmalig</div>
-                </div>
-                <button onClick={()=>alert("Stripe kommt bald!")} style={{padding:"10px 18px",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",color:"#eef0f6",fontSize:14}}>
-                  5 €
-                </button>
-              </div>
-            </div>
-            <div style={{...S.mono,fontSize:10,color:"#3a3d52",textAlign:"center",marginTop:16}}>
-              Zahlung via Stripe · Sicher & verschlüsselt · Jederzeit kündbar
-            </div>
-          </div>
-        </div>
-      )}
-      <div style={{maxWidth:900,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4,flexWrap:"wrap",gap:12}}>
-            <h1 style={{...S.display,fontSize:38}}>Wähle dein <span style={{color:"#f59e0b"}}>Model</span></h1>
-            <button onClick={()=>setShowTokenShop(true)} style={{padding:"10px 18px",background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:12,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:700,color:"#f59e0b",fontSize:14,flexShrink:0}}>
-              🪙 Tokens kaufen
-            </button>
-          </div>
-          <p style={{color:"#5a5e6b",fontSize:14,marginBottom:32}}>Verifizierte Models — deren Gesicht kommt in dein Video</p>
-          {models.length===0?(
-            <div style={{...S.card,padding:40,textAlign:"center"}}>
-              <div style={{fontSize:40,marginBottom:12}}>👤</div>
-              <div style={{fontWeight:700,fontSize:16,marginBottom:8}}>Noch keine Models verfügbar</div>
-              <div style={{...S.mono,fontSize:11,color:"#3a3d52"}}>Registriere dich als Model um als erstes dabei zu sein!</div>
-            </div>
-          ):(
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:16}}>
-              {models.map(model=>(
-                <div key={model.id} className="card-hover" onClick={()=>{setSelectedModel(model);setStep("prompt");}} style={{...S.card,padding:20,textAlign:"center"}}>
-                  {model.face_url?<img src={model.face_url} alt={model.name} style={{width:90,height:90,borderRadius:45,objectFit:"cover",border:"3px solid #f59e0b",marginBottom:12,display:"block",margin:"0 auto 12px"}}/>:<div style={{width:90,height:90,borderRadius:45,background:"rgba(245,158,11,0.1)",border:"3px solid #f59e0b",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 12px"}}>👤</div>}
-                  <div style={{fontWeight:700,fontSize:16,marginBottom:8}}>{model.name||model.email.split("@")[0]}</div>
-                  <div style={{display:"flex",flexWrap:"wrap",gap:4,justifyContent:"center",marginBottom:8}}>
-                    {(model.sports||[]).map(s=>{var sp=SPORTS.find(x=>x.id===s);return sp?<span key={s} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:`${sp.color}18`,color:sp.color,fontWeight:600}}>{sp.emoji} {sp.label}</span>:null;})}
-                  </div>
-                  <div style={{...S.mono,fontSize:10,color:"#22c55e"}}>✅ Verifiziert</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  if(step==="prompt")return(
-    <div style={S.page}><style>{css}</style>
-      <NavBar user={user} onLogout={onLogout} tokens={tokens}/>
-      <div style={{maxWidth:640,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <button onClick={reset} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
-          <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
-            {selectedModel.face_url?<img src={selectedModel.face_url} alt="" style={{width:64,height:64,borderRadius:32,objectFit:"cover",border:"2px solid #f59e0b"}}/>:<div style={{width:64,height:64,borderRadius:32,background:"rgba(245,158,11,0.1)",border:"2px solid #f59e0b",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>👤</div>}
-            <div><div style={{...S.display,fontSize:24}}>{selectedModel.name||selectedModel.email.split("@")[0]}</div><div style={{...S.mono,fontSize:10,color:"#22c55e"}}>✅ Verifiziertes Model</div></div>
-          </div>
-          <div style={{...S.card,padding:22,marginBottom:20}}>
-            <div style={{...S.label,marginBottom:12}}>WAS SOLL DAS MODEL TUN?</div>
-            <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="z.B. beim Surfen in Bali auf einer riesigen Welle reiten" style={{...S.input,minHeight:100,resize:"vertical",lineHeight:1.7}}/>
-            <div style={{...S.mono,fontSize:10,color:"#1e2030",marginTop:8}}>Verfügbar: {(selectedModel.sports||[]).map(s=>SPORTS.find(x=>x.id===s)?.label).filter(Boolean).join(" · ")}</div>
-          </div>
-          <button onClick={searchVideos} style={S.btn(prompt.trim().length>5&&!loading)}>{loading?"⏳ Suche Videos...":prompt.trim().length>5?"🔍 3 Video-Vorschläge finden →":"Mindestens 6 Zeichen eingeben"}</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  if(step==="suggestions")return(
-    <div style={S.page}><style>{css}</style>
-      <NavBar user={user} onLogout={onLogout} tokens={tokens}/>
-      <div style={{maxWidth:900,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <button onClick={()=>setStep("prompt")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
-          <h1 style={{...S.display,fontSize:32,marginBottom:4}}>3 Video-Vorschläge</h1>
-          <p style={{color:"#5a5e6b",fontSize:13,marginBottom:24}}>5 Sekunden gratis · dann mit Tokens freischalten</p>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))",gap:16}}>
-            {suggestions.map(video=>(
-              <div key={video.id} className="card-hover" onClick={()=>{setSelectedVideo(video);setStep("unlock");}} style={{...S.card,overflow:"hidden"}}>
-                <div style={{position:"relative",height:180,overflow:"hidden",background:"#000"}}>
-                  {/* Blurred video preview */}
-                  <video src={video.videoUrl} muted autoPlay loop playsInline
-                    style={{width:"100%",height:"100%",objectFit:"cover",filter:"blur(8px)",transform:"scale(1.1)"}}/>
-                  {/* Blur overlay */}
-                  <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)"}}/>
-                  {/* Lock icon */}
-                  <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",textAlign:"center"}}>
-                    <div style={{fontSize:36,marginBottom:6}}>🔒</div>
-                    <div style={{...S.mono,fontSize:10,color:"#f59e0b",fontWeight:700,letterSpacing:2}}>GESPERRT</div>
-                  </div>
-                  {/* Title bottom */}
-                  <div style={{position:"absolute",bottom:10,left:12,right:12}}>
-                    <div style={{fontWeight:700,fontSize:14,color:"#fff"}}>{video.title}</div>
-                    <div style={{...S.mono,fontSize:10,color:"#aaa"}}>{formatDuration(video.duration)}</div>
-                  </div>
-                  {/* Sport tag */}
-                  <div style={{position:"absolute",top:10,left:10,background:"rgba(0,0,0,0.7)",borderRadius:8,padding:"3px 8px",...S.mono,fontSize:10,color:"#f59e0b",fontWeight:700}}>
-                    {SPORTS.find(s=>s.id===video.sport)?.emoji} {SPORTS.find(s=>s.id===video.sport)?.label}
-                  </div>
-                </div>
-                <div style={{padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={{...S.mono,fontSize:10,color:"#5a5e6b"}}>Zum Freischalten klicken</div>
-                  <div style={{...S.mono,fontSize:11,color:"#f59e0b",fontWeight:700}}>ab 50 Tokens</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  if(step==="unlock"&&selectedVideo)return(
-    <div style={S.page}><style>{css}</style>
-      <NavBar user={user} onLogout={onLogout} tokens={tokens}/>
-      <div style={{maxWidth:640,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <button onClick={()=>setStep("suggestions")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
-          <h1 style={{...S.display,fontSize:32,marginBottom:20}}>Video freischalten</h1>
-          <div style={{...S.card,overflow:"hidden",marginBottom:20}}>
-            <div style={{position:"relative",height:220,background:"#000"}}>
-              <video src={selectedVideo.videoUrl} muted autoPlay loop playsInline
-                style={{width:"100%",height:"100%",objectFit:"cover",filter:"blur(10px)",transform:"scale(1.1)"}}/>
-              <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)",
-                display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-                <div style={{fontSize:52,marginBottom:10}}>🔒</div>
-                <div style={{...S.mono,fontSize:12,color:"#f59e0b",letterSpacing:2,marginBottom:4}}>VIDEO GESPERRT</div>
-                <div style={{fontWeight:700,fontSize:18}}>{selectedVideo.title}</div>
-                <div style={{...S.mono,fontSize:11,color:"#aaa",marginTop:4}}>{formatDuration(selectedVideo.duration)}</div>
-              </div>
-            </div>
-          </div>
-          <div style={{...S.label,marginBottom:14}}>LÄNGE WÄHLEN & FREISCHALTEN</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-            {[{label:"1 Minute",seconds:60,price:50},{label:"3 Minuten",seconds:180,price:100},{label:"5 Minuten",seconds:300,price:300},{label:"Komplett",seconds:selectedVideo.duration,price:500}].map(opt=>(
-              <button key={opt.seconds} onClick={()=>generateAndUnlock(opt.seconds)} disabled={tokens<opt.price}
-                style={{padding:"16px 12px",borderRadius:14,textAlign:"center",transition:"all .2s",border:`1px solid ${tokens>=opt.price?"rgba(245,158,11,0.3)":"rgba(255,255,255,0.04)"}`,background:tokens>=opt.price?"rgba(245,158,11,0.06)":"rgba(255,255,255,0.02)",cursor:tokens>=opt.price?"pointer":"not-allowed"}}>
-                <div style={{fontWeight:700,fontSize:15,color:tokens>=opt.price?"#eef0f6":"#333",marginBottom:4}}>{opt.label}</div>
-                <div style={{...S.mono,fontSize:13,color:tokens>=opt.price?"#f59e0b":"#444",fontWeight:700}}>{opt.price} Tokens</div>
-                {tokens<opt.price&&<div style={{...S.mono,fontSize:9,color:"#555",marginTop:4}}>Fehlen {opt.price-tokens}</div>}
-              </button>
-            ))}
-          </div>
-          <div style={{...S.mono,fontSize:10,color:"#3a3d52",textAlign:"center"}}>Guthaben: {tokens} Tokens</div>
-        </div>
-      </div>
-    </div>
-  );
-
-  if(step==="result")return(
-    <div style={S.page}><style>{css}</style>
-      <NavBar user={user} onLogout={onLogout} tokens={tokens}/>
-      <div style={{maxWidth:640,margin:"0 auto",padding:"32px 16px",textAlign:"center"}}>
-        <div className="fade-up">
-          {loading?(
-            <div style={{padding:"80px 0"}}>
-              <div className="spin" style={{fontSize:52,display:"inline-block",marginBottom:24}}>⭐</div>
-              <div style={{...S.display,fontSize:28,marginBottom:10}}>{procMsg}</div>
-              <div style={{...S.mono,fontSize:11,color:"#3a3d52"}}>Bitte nicht schließen · ~30-90 Sek</div>
-            </div>
-          ):resultUrl?(
-            <div>
-              <h2 style={{...S.display,fontSize:36,marginBottom:16}}>⭐ Dein Video ist fertig!</h2>
-              <div style={{position:"relative",marginBottom:20}}>
-                {resultUrl.endsWith(".jpg")||resultUrl.endsWith(".png")||resultUrl.endsWith(".jpeg")?(
-                  <img src={resultUrl} style={{width:"100%",borderRadius:16,border:"1px solid rgba(255,255,255,0.08)",display:"block"}}/>
-                ):(
-                  <video src={resultUrl} controls autoPlay loop style={{width:"100%",borderRadius:16,border:"1px solid rgba(255,255,255,0.08)",background:"#000"}}/>
-                )}
-              </div>
-              {audioUrl&&(
-                <div style={{...S.card,padding:16,marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
-                  <div style={{fontSize:24}}>🎵</div>
-                  <div style={{flex:1}}>
-                    <div style={{...S.mono,fontSize:10,color:"#f59e0b",marginBottom:4}}>PASSENDE MUSIK</div>
-                    <audio src={audioUrl} controls autoPlay loop style={{width:"100%",height:32}}/>
-                  </div>
-                </div>
-              )}
-              <button onClick={reset} style={S.btn(true)}>← Neues Video erstellen</button>
-            </div>
-          ):(
-            <div style={{padding:"80px 0"}}>
-              <div style={{fontSize:44,marginBottom:16}}>⚠️</div>
-              <div style={{fontWeight:700,color:"#f87171",marginBottom:8}}>Fehler</div>
-              <div style={{...S.mono,fontSize:12,color:"#3a3d52",marginBottom:24}}>{errorMsg}</div>
-              <button onClick={reset} style={S.btn(true)}>← Nochmal versuchen</button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function App(){
-  var [user,setUser]=useState(null);
-
-  useEffect(()=>{
-    supabase.auth.onAuthStateChange((event,session)=>{
-      if(event==="SIGNED_IN"&&session&&!user){
-        // Auto-login nach Mail-Bestätigung
-      }
-    });
-  },[]);
-
-  if(!user)return <AuthScreen onLogin={setUser}/>;
-  if(user.role==="model")return <ModelDashboard user={user} onLogout={()=>setUser(null)}/>;
-  return <ViewerDashboard user={user} onLogout={()=>setUser(null)}/>;
-}
+        print(f"Using video prompt: {video_prompt}")
+        
+        # Schritt 1: Sport-Video ohne Gesicht generieren
+        print(f"Generiere Sport-Video: {video_prompt}")
+        sport_video_output = replicate.run(
+            "minimax/video-01",
+            input={
+                "prompt": video_prompt,
+                "subject_reference": face_url_png,
+            }
+        )
+        
+        if isinstance(sport_video_output, list):
+            sport_video_url = str(sport_video_output[0])
+        elif hasattr(sport_video_output, 'url'):
+            sport_video_url = str(sport_video_output.url)
+        else:
+            sport_video_url = str(sport_video_output)
+            
+        print(f"Sport video: {sport_video_url}")
+        output = sport_video_url
+        
+        print(f"Video output: {output}")
+        result_url = str(output)
+        
+        print(f"result_url: {result_url}")
+        
+        # Audio generieren mit MusicGen
+        audio_url = None
+        try:
+            # Musik-Prompt basierend auf Sport und Stimmung
+            # Realistische Umgebungsgeräusche statt Musik
+            sound_prompts = {
+                "surf": "ocean waves crashing, seagulls calling, wind on beach, water splashing, surfer breathing heavily",
+                "ski": "wind howling on mountain, skis on snow, heavy breathing, snow crunching, distant avalanche rumble",
+                "climb": "wind on mountain cliff, heavy breathing and grunting, rocks scraping, rope tension sounds, birds of prey calling, distant thunder",
+                "bike": "mountain bike wheels on gravel trail, heavy breathing, wind rushing, chain rattling, leaves rustling",
+                "box": "boxing gloves hitting, heavy breathing and grunting, gym ambience, crowd cheering, punching bag impact",
+                "yoga": "birds singing, gentle breeze, peaceful nature sounds, calm breathing, distant water stream",
+                "dive": "underwater bubbles, scuba breathing regulator, ocean ambience, fish swimming, deep water pressure sounds",
+                "skate": "skateboard wheels on concrete, urban street sounds, crowd cheering, board tricks landing, city ambience",
+            }
+            music_prompt = sound_prompts.get(sport, "outdoor sport ambient sounds, heavy breathing, nature")
+            
+            # User-Prompt für Stimmungsanpassung
+            if any(w in prompt.lower() for w in ["nacht","night","dunkel","dark"]):
+                music_prompt += ", night crickets, owls, dark atmospheric sounds"
+            if any(w in prompt.lower() for w in ["regen","rain","sturm","storm"]):
+                music_prompt += ", rain falling, thunder in distance, wet surface sounds"
+            if any(w in prompt.lower() for w in ["extrem","extreme","wild","crazy"]):
+                music_prompt += ", intense heavy breathing, adrenaline rush sounds"
+            if any(w in prompt.lower() for w in ["gruppe","group","team"]):
+                music_prompt += ", multiple people breathing, team cheering"
+                
+            print(f"Music prompt: {music_prompt}")
+            
+            audio_output = replicate.run(
+                "meta/musicgen:671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb",
+                input={
+                    "prompt": music_prompt,
+                    "duration": 8,
+                    "model_version": "stereo-melody-large",
+                    "output_format": "mp3",
+                }
+            )
+            if audio_output:
+                audio_url = str(audio_output)
+                print(f"Audio URL: {audio_url}")
+        except Exception as ae:
+            print(f"Audio generation error: {ae}")
+        
+        print(f"Replicate result: {result_url}")
+        
+        # Cloudinary Upload — resource_type auto erkennt ob video oder bild
+        try:
+            final = cloudinary.uploader.upload(
+                result_url,
+                resource_type="auto",
+                public_id=f"results/{uuid.uuid4().hex}",
+                overwrite=True,
+            )
+            final_url = final["secure_url"]
+        except Exception as cu:
+            print(f"Cloudinary upload fehler: {cu}")
+            # Direkt Replicate URL zurückgeben
+            final_url = result_url
+        
+        return JSONResponse({
+            "success": True, 
+            "video_url": final_url, 
+            "audio_url": audio_url,
+            "sport": sport,
+            "prompt_used": video_prompt,
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Faceswap error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
