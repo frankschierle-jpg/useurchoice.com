@@ -739,7 +739,25 @@ function ViewerDashboard({user,onLogout}){
     loadModels();
   },[]);
 
-  function searchVideos(){setLoading(true);setTimeout(()=>{setSuggestions(getVideoSuggestions(prompt));setLoading(false);setStep("suggestions");},1200);}
+  async function searchVideos(){
+    setLoading(true);
+    try{
+      var res=await fetch(`${BACKEND_URL}/videos/search?prompt=${encodeURIComponent(prompt)}&count=3`);
+      if(!res.ok)throw new Error("Video-Suche fehlgeschlagen");
+      var data=await res.json();
+      if(data.videos&&data.videos.length>0){
+        setSuggestions(data.videos);
+      } else {
+        // Fallback auf lokale Videos
+        setSuggestions(getVideoSuggestions(prompt));
+      }
+    }catch(e){
+      console.error("Pexels Fehler:",e);
+      setSuggestions(getVideoSuggestions(prompt));
+    }
+    setLoading(false);
+    setStep("suggestions");
+  }
 
   async function generateAndUnlock(durationSeconds){
     var price=getTokenPrice(durationSeconds);
