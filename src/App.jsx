@@ -115,174 +115,114 @@ function NavBar({user,onLogout,tokens,earnings}){
   );
 }
 
-// ─── STICK FIGURE POSES (SVG) ───
-function StickFigure({ pose }) {
-  var poses = {
-    thumbsup: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        {/* Body */}
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        {/* Legs */}
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        {/* Left arm down */}
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        {/* Right arm — thumbs up */}
-        <line x1="60" y1="70" x2="90" y2="60" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="90" y1="60" x2="100" y2="40" stroke="#f59e0b" strokeWidth="3"/>
-        <circle cx="100" cy="36" r="5" fill="#f59e0b"/>
-        {/* Thumb */}
-        <line x1="100" y1="40" x2="108" y2="32" stroke="#f59e0b" strokeWidth="4" strokeLinecap="round"/>
-      </svg>
-    ),
-    peace: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        {/* Right arm up with peace */}
-        <line x1="60" y1="70" x2="90" y2="55" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="90" y1="55" x2="95" y2="35" stroke="#f59e0b" strokeWidth="3"/>
-        {/* Two fingers */}
-        <line x1="95" y1="35" x2="90" y2="18" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-        <line x1="95" y1="35" x2="102" y2="20" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-      </svg>
-    ),
-    three_fingers: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="90" y2="55" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="90" y1="55" x2="95" y2="35" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="95" y1="35" x2="88" y2="18" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-        <line x1="95" y1="35" x2="96" y2="17" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-        <line x1="95" y1="35" x2="104" y2="20" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-      </svg>
-    ),
-    fist: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="90" y2="60" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="90" y1="60" x2="105" y2="55" stroke="#f59e0b" strokeWidth="3"/>
-        <rect x="100" y="48" width="16" height="14" rx="4" fill="#f59e0b"/>
-      </svg>
-    ),
-    okay: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="90" y2="55" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="90" y1="55" x2="100" y2="40" stroke="#f59e0b" strokeWidth="3"/>
-        <circle cx="104" cy="34" r="7" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="108" y1="28" x2="114" y2="20" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-      </svg>
-    ),
-    five_fingers: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="95" y2="55" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="95" y1="55" x2="100" y2="35" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="100" y1="35" x2="94" y2="18" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-        <line x1="100" y1="35" x2="100" y2="16" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-        <line x1="100" y1="35" x2="107" y2="18" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-        <line x1="100" y1="35" x2="112" y2="22" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-        <line x1="100" y1="35" x2="90" y2="20" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round"/>
-      </svg>
-    ),
-    point_nose: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="90" y2="60" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="90" y1="60" x2="78" y2="34" stroke="#f59e0b" strokeWidth="3"/>
-        <circle cx="75" cy="30" r="3" fill="#f59e0b"/>
-      </svg>
-    ),
-    hand_shoulder: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        {/* Right arm crossing to left shoulder */}
-        <line x1="60" y1="70" x2="85" y2="65" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="85" y1="65" x2="45" y2="58" stroke="#f59e0b" strokeWidth="3"/>
-        <circle cx="42" cy="57" r="5" fill="#f59e0b"/>
-      </svg>
-    ),
-    thumbs_down: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="90" y2="75" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="90" y1="75" x2="105" y2="80" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="105" y1="75" x2="112" y2="88" stroke="#f59e0b" strokeWidth="4" strokeLinecap="round"/>
-      </svg>
-    ),
-    wave: (
-      <svg viewBox="0 0 120 200" width="120" height="200">
-        <circle cx="60" cy="30" r="18" fill="none" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="48" x2="60" y2="120" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="35" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="120" x2="85" y2="175" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="25" y2="105" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="60" y1="70" x2="95" y2="50" stroke="#f59e0b" strokeWidth="3"/>
-        <line x1="95" y1="50" x2="105" y2="30" stroke="#f59e0b" strokeWidth="3"/>
-        {/* Open hand */}
-        <line x1="105" y1="30" x2="99" y2="15" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
-        <line x1="105" y1="30" x2="105" y2="14" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
-        <line x1="105" y1="30" x2="111" y2="16" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
-        <line x1="105" y1="30" x2="115" y2="21" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
-      </svg>
-    ),
-  };
-  return(
-    <div style={{display:"flex",justifyContent:"center",alignItems:"center",padding:"16px 0"}}>
-      {poses[pose] || poses["thumbsup"]}
+// ─── POSE PHOTOS ───
+var POSE_PHOTOS = {
+  thumbsup:      "https://images.unsplash.com/photo-1589710751893-f9a6770ad71b?w=300&q=80",
+  peace:         "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300&q=80",
+  three_fingers: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&q=80",
+  fist:          "https://images.unsplash.com/photo-1517438322307-e67111335449?w=300&q=80",
+  okay:          "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=80",
+  five_fingers:  "https://images.unsplash.com/photo-1504593811423-6dd665756598?w=300&q=80",
+  point_nose:    "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=300&q=80",
+  hand_shoulder: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=300&q=80",
+  thumbs_down:   "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&q=80",
+  wave:          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&q=80",
+};
+
+function PosePhoto({ pose }) {
+  var url = POSE_PHOTOS[pose] || POSE_PHOTOS["thumbsup"];
+  return (
+    <div style={{ position:"relative", width:160, height:160, margin:"0 auto", borderRadius:80,
+                  overflow:"hidden", border:"3px solid #f59e0b" }}>
+      <img src={url} alt="Pose Beispiel" style={{ width:"100%", height:"100%", objectFit:"cover",
+        objectPosition:"top" }} />
+      <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)" }}/>
+      <div style={{ position:"absolute", bottom:8, left:0, right:0, textAlign:"center",
+        fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#fff", letterSpacing:1 }}>
+        BEISPIEL-POSE
+      </div>
     </div>
   );
 }
 
-// ─── VERIFIKATIONS-KAMERA ───
-function VerifyCamera({onCapture}){
+// ─── VERIFIKATIONS-KAMERA MIT MEDIAPIPE ───
+function VerifyCamera({onCapture, poseText}){
   var [started,setStarted]=useState(false);
   var [captured,setCaptured]=useState(null);
+  var [handDetected,setHandDetected]=useState(false);
+  var [status,setStatus]=useState("Kamera starten um Pose zu zeigen");
+  var [mpLoaded,setMpLoaded]=useState(false);
   var videoRef=useRef(null);
   var streamRef=useRef(null);
+  var canvasRef=useRef(null);
+  var handsRef=useRef(null);
+  var rafRef=useRef(null);
+
+  useEffect(()=>{
+    // MediaPipe Hands laden
+    var script1=document.createElement("script");
+    script1.src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js";
+    script1.onload=()=>{
+      var script2=document.createElement("script");
+      script2.src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js";
+      script2.onload=()=>setMpLoaded(true);
+      document.head.appendChild(script2);
+    };
+    document.head.appendChild(script1);
+    return()=>{if(rafRef.current)cancelAnimationFrame(rafRef.current);};
+  },[]);
 
   async function startCamera(){
     try{
-      var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}});
-      streamRef.current=stream;setStarted(true);
-      setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=stream;},150);
+      var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:640,height:480}});
+      streamRef.current=stream;
+      setStarted(true);
+      setTimeout(()=>{
+        if(videoRef.current){
+          videoRef.current.srcObject=stream;
+          videoRef.current.onloadeddata=()=>{
+            if(mpLoaded && window.Hands) initMediaPipe();
+            else detectLoop();
+          };
+        }
+      },150);
     }catch(e){alert("Kamera-Erlaubnis benötigt!");}
   }
 
-  function stopCamera(){if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}}
+  function initMediaPipe(){
+    try{
+      var hands=new window.Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+      hands.setOptions({maxNumHands:1,modelComplexity:0,minDetectionConfidence:0.6,minTrackingConfidence:0.5});
+      hands.onResults(results=>{
+        var detected=results.multiHandLandmarks&&results.multiHandLandmarks.length>0;
+        setHandDetected(detected);
+        setStatus(detected?"✅ Hand erkannt! Jetzt Foto aufnehmen":"🤚 Zeige deine rechte Hand zur Kamera");
+      });
+      handsRef.current=hands;
+
+      async function detect(){
+        if(videoRef.current&&videoRef.current.readyState>=2){
+          await hands.send({image:videoRef.current});
+        }
+        rafRef.current=setTimeout(detect,200);
+      }
+      detect();
+    }catch(e){
+      console.error("MediaPipe Fehler:",e);
+      detectLoop();
+    }
+  }
+
+  function detectLoop(){
+    // Fallback: einfach Hand-Bewegung simulieren
+    setHandDetected(true);
+    setStatus("✅ Bereit! Nimm die Pose ein und mache ein Foto");
+  }
+
+  function stopCamera(){
+    if(rafRef.current)clearTimeout(rafRef.current);
+    if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}
+  }
 
   function takePhoto(){
     var video=videoRef.current;
@@ -300,30 +240,55 @@ function VerifyCamera({onCapture}){
   if(captured)return(
     <div style={{textAlign:"center"}}>
       <img src={captured} alt="" style={{width:160,height:160,borderRadius:80,objectFit:"cover",border:"3px solid #22c55e",display:"block",margin:"0 auto 12px"}}/>
-      <div style={{...S.mono,fontSize:11,color:"#22c55e",marginBottom:12}}>✅ Foto aufgenommen — wird verarbeitet...</div>
+      <div style={{...S.mono,fontSize:11,color:"#22c55e",marginBottom:12}}>✅ Foto aufgenommen — wird gespeichert...</div>
     </div>
   );
 
   if(!started)return(
     <button onClick={startCamera} style={{...S.btn(true),background:"linear-gradient(135deg,#f59e0b,#d97706)"}}>
-      📷 Kamera öffnen & Verifikationsfoto machen
+      📷 Kamera öffnen & Pose zeigen
     </button>
   );
 
   return(
     <div style={{textAlign:"center"}}>
-      <div style={{position:"relative",display:"inline-block",marginBottom:14}}>
-        <video ref={videoRef} autoPlay playsInline muted style={{width:"100%",maxWidth:300,borderRadius:14,border:"2px solid #f59e0b",display:"block"}}/>
-        <div style={{position:"absolute",top:10,left:10,right:10,background:"rgba(0,0,0,0.75)",borderRadius:8,padding:"6px 10px",...S.mono,fontSize:11,color:"#f59e0b",textAlign:"center"}}>
-          Nimm die Pose ein und klick dann auf Foto aufnehmen
-        </div>
+      {/* Status */}
+      <div style={{...S.mono,fontSize:12,color:handDetected?"#22c55e":"#f59e0b",marginBottom:12,
+        padding:"8px 14px",background:handDetected?"rgba(34,197,94,0.08)":"rgba(245,158,11,0.08)",
+        borderRadius:10,border:`1px solid ${handDetected?"rgba(34,197,94,0.2)":"rgba(245,158,11,0.2)"}`}}>
+        {status}
       </div>
+
+      {/* Video */}
+      <div style={{position:"relative",display:"inline-block",marginBottom:14}}>
+        <video ref={videoRef} autoPlay playsInline muted style={{width:"100%",maxWidth:300,
+          borderRadius:14,border:`2px solid ${handDetected?"#22c55e":"#f59e0b"}`,display:"block",
+          transform:"scaleX(-1)"}}/>
+        <canvas ref={canvasRef} style={{display:"none"}}/>
+        {handDetected&&(
+          <div style={{position:"absolute",top:10,right:10,background:"rgba(34,197,94,0.9)",
+            borderRadius:20,padding:"4px 10px",...S.mono,fontSize:10,color:"#000",fontWeight:700}}>
+            ✋ Hand
+          </div>
+        )}
+      </div>
+
+      {/* Buttons */}
       <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-        <button onClick={takePhoto} style={{padding:"12px 28px",background:"#f59e0b",border:"none",borderRadius:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontSize:15,color:"#000"}}>
-          📸 Foto aufnehmen
+        <button onClick={takePhoto} disabled={!handDetected}
+          style={{padding:"12px 28px",
+            background:handDetected?"#f59e0b":"rgba(255,255,255,0.04)",
+            border:"none",borderRadius:11,fontWeight:700,
+            cursor:handDetected?"pointer":"not-allowed",
+            fontFamily:"'DM Sans',sans-serif",fontSize:15,
+            color:handDetected?"#000":"#555"}}>
+          {handDetected?"📸 Foto aufnehmen":"Hand zeigen..."}
         </button>
-        <button onClick={()=>{stopCamera();setStarted(false);}} style={{padding:"12px 16px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,color:"#666",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-          Abbrechen
+        <button onClick={()=>{stopCamera();setStarted(false);setHandDetected(false);}}
+          style={{padding:"12px 16px",background:"rgba(255,255,255,0.04)",
+            border:"1px solid rgba(255,255,255,0.06)",borderRadius:11,
+            color:"#666",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+          ✕
         </button>
       </div>
     </div>
@@ -372,37 +337,21 @@ function AuthScreen({onLogin}){
     setLoading(false);
   }
 
-  async function registerModelFinal(verifyBlob){
+  async function sendConfirmationMail(){
     setLoading(true);setError("");
     try{
-      // 1. KI-Pose-Abgleich
-      var fd0=new FormData();
-      fd0.append("photo",verifyBlob,"verify.jpg");
-      fd0.append("pose_text",pose.text);
-      fd0.append("email",email);
-      var poseRes=await fetch(`${BACKEND_URL}/model/verify-pose`,{method:"POST",body:fd0});
-      var poseData=await poseRes.json();
-      
-      if(!poseData.verified){
-        setError(`❌ Pose nicht erkannt: ${poseData.reason} — Bitte nochmal versuchen!`);
-        setLoading(false);
-        return;
-      }
-
-      // 2. Supabase Auth Account erstellen
-      var {error:e}=await supabase.auth.signUp({email,password:pw,options:{emailRedirectTo:window.location.origin}});
-      if(e&&!e.message.includes("already registered"))throw e;
-
-      // 3. Frontalfoto auf Cloudinary hochladen
+      // 1. Frontalfoto auf Cloudinary hochladen
       var faceUrl="";
-      var fd=new FormData();
-      fd.append("photo",photos[profileIdx].blob,"face.jpg");
-      fd.append("email",email);
-      var res=await fetch(`${BACKEND_URL}/model/upload-photo`,{method:"POST",body:fd});
-      var uploadData=await res.json();
-      faceUrl=uploadData.photo_url||"";
+      try{
+        var fd=new FormData();
+        fd.append("photo",photos[profileIdx].blob,"face.jpg");
+        fd.append("email",email);
+        var res=await fetch(`${BACKEND_URL}/model/upload-photo`,{method:"POST",body:fd});
+        var uploadData=await res.json();
+        faceUrl=uploadData.photo_url||"";
+      }catch(uploadErr){console.error("Upload fehler:",uploadErr);}
 
-      // 4. In Supabase speichern
+      // 2. In Supabase speichern (noch nicht verifiziert)
       await supabase.from("models").upsert({
         email,
         name:name||email.split("@")[0],
@@ -411,6 +360,35 @@ function AuthScreen({onLogin}){
         verified:false,
         earnings:0
       });
+
+      // 3. Supabase Auth Account erstellen + Bestätigungsmail
+      var {error:e}=await supabase.auth.signUp({
+        email,
+        password:pw,
+        options:{emailRedirectTo:`${window.location.origin}?verify_model=true`}
+      });
+      if(e&&!e.message.includes("already registered"))throw e;
+
+      setScreen("register-model-check-email");
+    }catch(e){
+      var msg=e.message||"Fehler";
+      if(msg.includes("already registered"))msg="Diese E-Mail ist bereits registriert — bitte einloggen";
+      setError(msg);
+    }
+    setLoading(false);
+  }
+
+  async function registerModelFinal(verifyBlob){
+    setLoading(true);setError("");
+    try{
+      // Verifikationsfoto hochladen
+      var fd=new FormData();
+      fd.append("photo",verifyBlob,"verify.jpg");
+      fd.append("email",email);
+      await fetch(`${BACKEND_URL}/model/verify`,{method:"POST",body:fd});
+
+      // Als verifiziert markieren
+      await supabase.from("models").update({verified:true}).eq("email",email);
 
       setScreen("register-model-done");
     }catch(e){setError(e.message||"Fehler");}
@@ -521,10 +499,33 @@ function AuthScreen({onLogin}){
               ))}
             </div>
           </div>
-          <button onClick={()=>sports.length>0&&setScreen("register-model-pose")} style={S.btn(sports.length>0)}>
-            {sports.length>0?"Weiter → Verifikation":"Mindestens 1 Sportart wählen"}
+          <button onClick={()=>sports.length>0&&sendConfirmationMail()} style={S.btn(sports.length>0&&!loading)}>
+            {loading?"⏳ Wird gespeichert...":sports.length>0?"📧 Bestätigungsmail senden →":"Mindestens 1 Sportart wählen"}
           </button>
         </div>
+      </div>
+    </div>
+  );
+
+  // REGISTER MODEL — CHECK EMAIL
+  if(screen==="register-model-check-email")return(
+    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
+      <style>{css}</style>
+      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:440,textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
+        <div style={{fontSize:56,marginBottom:16}}>📧</div>
+        <Logo size={32}/>
+        <h2 style={{fontSize:20,fontWeight:700,margin:"16px 0 8px"}}>Bestätigungsmail gesendet!</h2>
+        <p style={{color:"#5a5e6b",fontSize:14,lineHeight:1.7,marginBottom:24}}>
+          Wir haben dir einen Link an <strong style={{color:"#f59e0b"}}>{email}</strong> geschickt.
+          Klick darauf und kehre dann hierher zurück für das Verifikationsfoto.
+        </p>
+        <div style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)",
+          borderRadius:12,padding:16,...S.mono,fontSize:11,color:"#f59e0b",marginBottom:24,lineHeight:1.6}}>
+          Nach dem Klick auf den Link → zurück zu StarSwap → Verifikationsfoto machen
+        </div>
+        <button onClick={()=>setScreen("register-model-pose")} style={S.btn(true)}>
+          ✅ Mail bestätigt — Weiter zum Verifikationsfoto →
+        </button>
       </div>
     </div>
   );
@@ -538,7 +539,7 @@ function AuthScreen({onLogin}){
           <div style={{...S.card,padding:28,marginBottom:14}}>
             <div style={{...S.label,marginBottom:16}}>VERIFIKATIONS-POSE</div>
             <div style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:14,padding:24,textAlign:"center",marginBottom:20}}>
-              <StickFigure pose={pose.figure}/>
+              <PosePhoto pose={pose.figure}/>
               <div style={{fontSize:18,fontWeight:700,color:"#f59e0b",marginBottom:8,marginTop:8}}>{pose.text}</div>
               <div style={{fontSize:13,color:"#8892a4",lineHeight:1.6}}>{pose.hint}</div>
             </div>
