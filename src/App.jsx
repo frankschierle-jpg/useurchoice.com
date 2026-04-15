@@ -60,15 +60,15 @@ var VIDEO_PREVIEWS = [
   { id:"v9", sport:"skate", title:"Venice Beach Halfpipe",  thumb:"https://images.unsplash.com/photo-1564296786786-a4dd73e51086?w=400&q=80", duration:120 },
 ];
 
-function getTokenPrice(s) { if(s<=60)return 50; if(s<=180)return 100; if(s<=300)return 300; return 500; }
-function formatDuration(s) { if(s<60)return s+" Sek"; return Math.floor(s/60)+" Min"+(s%60>0?" "+s%60+"s":""); }
-function detectSport(text) {
+function getTokenPrice(s){if(s<=60)return 50;if(s<=180)return 100;if(s<=300)return 300;return 500;}
+function formatDuration(s){if(s<60)return s+" Sek";return Math.floor(s/60)+" Min"+(s%60>0?" "+s%60+"s":"");}
+function detectSport(text){
   var t=text.toLowerCase();
   var m={surf:["surf","welle","ozean","beach","bali","hawaii","meer"],ski:["ski","schnee","alpen","piste","winter","snowboard"],climb:["kletter","fels","berg","bouldern"],bike:["bike","fahrrad","downhill","trail","mtb"],box:["box","ring","kampf","boxen","sparring"],yoga:["yoga","meditation","flow"],dive:["tauch","unterwasser","koralle"],skate:["skate","halfpipe","skateboard"]};
   for(var sport in m){if(m[sport].some(k=>t.includes(k)))return sport;}
   return null;
 }
-function getVideoSuggestions(prompt) {
+function getVideoSuggestions(prompt){
   var sport=detectSport(prompt);
   var pool=sport?VIDEO_PREVIEWS.filter(v=>v.sport===sport):VIDEO_PREVIEWS;
   if(pool.length<3)pool=[...pool,...VIDEO_PREVIEWS.filter(v=>v.sport!==sport)];
@@ -86,6 +86,7 @@ var css=`
   ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:#1e2030;border-radius:2px;}
   .card-hover{transition:all .25s ease;cursor:pointer;}.card-hover:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.5);}
 `;
+
 var S={
   page:{minHeight:"100vh",background:"#08090f",color:"#eef0f6",fontFamily:"'DM Sans',sans-serif"},
   display:{fontFamily:"'Bebas Neue',cursive",letterSpacing:"0.05em"},
@@ -112,58 +113,263 @@ function NavBar({user,onLogout,tokens,earnings}){
   );
 }
 
-function LoginScreen({onLogin}){
+// ─── AUTH SCREEN ───
+function AuthScreen({onLogin}){
+  var [screen,setScreen]=useState("choose"); // choose | login | register-viewer | register-model-email | register-model-photos | register-model-pose | register-model-done | check-email
   var [email,setEmail]=useState("");
   var [pw,setPw]=useState("");
-  var [role,setRole]=useState("viewer");
-  var [mode,setMode]=useState("login");
+  var [name,setName]=useState("");
+  var [sports,setSports]=useState([]);
+  var [photos,setPhotos]=useState([]);
+  var [profileIdx,setProfileIdx]=useState(0);
+  var [pose]=useState(()=>ALL_POSES[Math.floor(Math.random()*ALL_POSES.length)]);
   var [loading,setLoading]=useState(false);
   var [error,setError]=useState("");
 
-  async function handleSubmit(){
-    if(!email||!pw)return;
+  function toggleSport(id){setSports(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);}
+
+  async function loginSubmit(){
     setLoading(true);setError("");
     try{
-      if(mode==="register"){
-        var {error:e}=await supabase.auth.signUp({email,password:pw});
-        if(e)throw e;
-      }
-      var {data,error:e2}=await supabase.auth.signInWithPassword({email,password:pw});
-      if(e2)throw e2;
-      onLogin({email,role,tokens:80,earnings:0,id:data.user.id});
-    }catch(e){setError(e.message||"Fehler beim Login");}
+      var {data,error:e}=await supabase.auth.signInWithPassword({email,password:pw});
+      if(e)throw e;
+      var {data:modelData}=await supabase.from("models").select("*").eq("email",email).single();
+      var role=modelData?"model":"viewer";
+      onLogin({email,role,tokens:80,earnings:modelData?.earnings||0,id:data.user.id,modelData});
+    }catch(e){
+      var msg=e.message||"Fehler";
+      if(msg.includes("Invalid login credentials"))msg="E-Mail oder Passwort falsch";
+      if(msg.includes("Email not confirmed"))msg="Bitte zuerst die Bestätigungs-Mail anklicken";
+      setError(msg);
+    }
     setLoading(false);
   }
 
-  return(
+  async function registerViewer(){
+    setLoading(true);setError("");
+    try{
+      var {error:e}=await supabase.auth.signUp({email,password:pw,options:{emailRedirectTo:window.location.origin}});
+      if(e)throw e;
+      setScreen("check-email");
+    }catch(e){setError(e.message||"Fehler");}
+    setLoading(false);
+  }
+
+  async function registerModelFinal(verifyPhoto){
+    setLoading(true);setError("");
+    try{
+      // 1. Supabase Auth Account erstellen
+      var {error:e}=await supabase.auth.signUp({email,password:pw,options:{emailRedirectTo:window.location.origin}});
+      if(e&&!e.message.includes("already registered"))throw e;
+
+      // 2. Frontalfoto auf Cloudinary hochladen
+      var faceUrl="";
+      var fd=new FormData();
+      fd.append("photo",photos[profileIdx].blob,"face.jpg");
+      fd.append("email",email);
+      var res=await fetch(`${BACKEND_URL}/model/upload-photo`,{method:"POST",body:fd});
+      var uploadData=await res.json();
+      faceUrl=uploadData.photo_url||"";
+
+      // 3. Verifikationsfoto hochladen
+      var fd2=new FormData();
+      fd2.append("photo",verifyPhoto);
+      fd2.append("email",email);
+      await fetch(`${BACKEND_URL}/model/verify`,{method:"POST",body:fd2});
+
+      // 4. In Supabase speichern
+      await supabase.from("models").upsert({email,name:name||email.split("@")[0],face_url:faceUrl,sports,verified:false,earnings:0});
+
+      setScreen("register-model-done");
+    }catch(e){setError(e.message||"Fehler");}
+    setLoading(false);
+  }
+
+  // CHOOSE
+  if(screen==="choose")return(
+    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, #08090f 60%)"}}>
+      <style>{css}</style>
+      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:440,boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
+        <div style={{textAlign:"center",marginBottom:36}}><Logo size={44}/><div style={{...S.mono,fontSize:11,color:"#3a3d52",marginTop:8}}>Be the star of every video</div></div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <button onClick={()=>setScreen("login")} style={{...S.btn(true),background:"linear-gradient(135deg,#f59e0b,#d97706)"}}>Einloggen</button>
+          <button onClick={()=>setScreen("register-viewer")} style={{...S.btn(true,"rgba(255,255,255,0.06)"),color:"#eef0f6",boxShadow:"none"}}>👁️ Als Viewer registrieren</button>
+          <button onClick={()=>setScreen("register-model-email")} style={{...S.btn(true,"rgba(245,158,11,0.1)"),color:"#f59e0b",border:"1px solid rgba(245,158,11,0.3)",boxShadow:"none"}}>⭐ Als Model registrieren</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // LOGIN
+  if(screen==="login")return(
     <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, #08090f 60%)"}}>
       <style>{css}</style>
       <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:420,boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
-        <div style={{textAlign:"center",marginBottom:32}}><Logo size={42}/><div style={{...S.mono,fontSize:11,color:"#3a3d52",marginTop:8}}>Be the star of every video</div></div>
-        <div style={{display:"flex",gap:6,marginBottom:24,background:"rgba(255,255,255,0.02)",borderRadius:12,padding:4}}>
-          {["login","register"].map(m=>(
-            <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"9px 0",borderRadius:9,border:"none",background:mode===m?"rgba(245,158,11,0.12)":"transparent",color:mode===m?"#f59e0b":"#555",cursor:"pointer",fontWeight:600,fontFamily:"'DM Sans',sans-serif",fontSize:13,transition:"all .2s"}}>
-              {m==="login"?"Einloggen":"Registrieren"}
-            </button>
-          ))}
-        </div>
+        <button onClick={()=>setScreen("choose")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
+        <div style={{textAlign:"center",marginBottom:28}}><Logo size={36}/></div>
         <div style={{marginBottom:14}}><div style={{...S.label,marginBottom:8}}>E-MAIL</div><input style={S.input} value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@beispiel.de"/></div>
         <div style={{marginBottom:24}}><div style={{...S.label,marginBottom:8}}>PASSWORT</div><input style={S.input} type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••"/></div>
-        <div style={{...S.label,marginBottom:12}}>ROLLE</div>
-        <div style={{display:"flex",gap:8,marginBottom:error?16:28}}>
-          {[["viewer","👁️ Viewer"],["model","⭐ Model"]].map(([r,l])=>(
-            <button key={r} onClick={()=>setRole(r)} style={{flex:1,padding:"11px 0",borderRadius:11,border:`1px solid ${role===r?"#f59e0b":"rgba(255,255,255,0.06)"}`,background:role===r?"rgba(245,158,11,0.08)":"transparent",color:role===r?"#f59e0b":"#555",cursor:"pointer",fontWeight:700,fontFamily:"'DM Sans',sans-serif",fontSize:14,transition:"all .2s"}}>{l}</button>
-          ))}
-        </div>
         {error&&<div style={{...S.mono,fontSize:11,color:"#f87171",marginBottom:16,padding:"8px 12px",background:"rgba(248,113,113,0.08)",borderRadius:8}}>{error}</div>}
-        <button onClick={handleSubmit} style={S.btn(email&&pw&&!loading)}>
-          {loading?"⏳ Bitte warten...":(mode==="login"?"Einloggen →":"Account erstellen →")}
-        </button>
+        <button onClick={loginSubmit} style={S.btn(email&&pw&&!loading)}>{loading?"⏳ Einloggen...":"Einloggen →"}</button>
+      </div>
+    </div>
+  );
+
+  // REGISTER VIEWER
+  if(screen==="register-viewer")return(
+    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, #08090f 60%)"}}>
+      <style>{css}</style>
+      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:420,boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
+        <button onClick={()=>setScreen("choose")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
+        <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#3a3d52",marginTop:6}}>👁️ Viewer Registrierung</div></div>
+        <div style={{marginBottom:14}}><div style={{...S.label,marginBottom:8}}>E-MAIL</div><input style={S.input} value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@beispiel.de"/></div>
+        <div style={{marginBottom:24}}><div style={{...S.label,marginBottom:8}}>PASSWORT</div><input style={S.input} type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Mindestens 6 Zeichen"/></div>
+        {error&&<div style={{...S.mono,fontSize:11,color:"#f87171",marginBottom:16,padding:"8px 12px",background:"rgba(248,113,113,0.08)",borderRadius:8}}>{error}</div>}
+        <button onClick={registerViewer} style={S.btn(email&&pw.length>=6&&!loading)}>{loading?"⏳ Wird erstellt...":"Account erstellen → Bestätigungsmail"}</button>
+        <div style={{...S.mono,fontSize:10,color:"#3a3d52",textAlign:"center",marginTop:12}}>Du erhältst eine Bestätigungsmail</div>
+      </div>
+    </div>
+  );
+
+  // REGISTER MODEL — EMAIL + PASSWORT
+  if(screen==="register-model-email")return(
+    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.07) 0%, #08090f 60%)"}}>
+      <style>{css}</style>
+      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:420,boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
+        <button onClick={()=>setScreen("choose")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
+        <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#f59e0b",marginTop:6}}>⭐ Model Registrierung — Schritt 1/3</div></div>
+        <div style={{marginBottom:14}}><div style={{...S.label,marginBottom:8}}>DEIN NAME</div><input style={S.input} value={name} onChange={e=>setName(e.target.value)} placeholder="z.B. Alex M."/></div>
+        <div style={{marginBottom:14}}><div style={{...S.label,marginBottom:8}}>E-MAIL</div><input style={S.input} value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@beispiel.de"/></div>
+        <div style={{marginBottom:24}}><div style={{...S.label,marginBottom:8}}>PASSWORT</div><input style={S.input} type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="Mindestens 6 Zeichen"/></div>
+        <button onClick={()=>email&&pw.length>=6&&setScreen("register-model-photos")} style={S.btn(email&&pw.length>=6)}>Weiter → Fotos aufnehmen</button>
+      </div>
+    </div>
+  );
+
+  // REGISTER MODEL — 5 FOTOS
+  if(screen==="register-model-photos")return(
+    <div style={S.page}><style>{css}</style>
+      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
+        <div className="fade-up">
+          <button onClick={()=>setScreen("register-model-email")} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
+          <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#f59e0b",marginTop:6}}>⭐ Model Registrierung — Schritt 2/3</div></div>
+          <div style={{...S.card,padding:24,marginBottom:16}}>
+            <div style={{...S.label,marginBottom:16}}>5 GESICHTSFOTOS AUFNEHMEN</div>
+            <FaceCapture userEmail={email} onComplete={p=>{setPhotos(p);setScreen("register-model-sports");}}/>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // REGISTER MODEL — SPORTARTEN
+  if(screen==="register-model-sports")return(
+    <div style={S.page}><style>{css}</style>
+      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
+        <div className="fade-up">
+          <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#f59e0b",marginTop:6}}>⭐ Model Registrierung — Schritt 2/3</div></div>
+          <div style={{...S.card,padding:20,marginBottom:14}}>
+            <div style={{...S.label,marginBottom:12}}>PROFILBILD WÄHLEN</div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              {photos.map((p,i)=>(
+                <div key={i} onClick={()=>setProfileIdx(i)} style={{cursor:"pointer",position:"relative"}}>
+                  <img src={p.url} alt="" style={{width:72,height:72,borderRadius:36,objectFit:"cover",border:`3px solid ${profileIdx===i?"#f59e0b":"rgba(255,255,255,0.06)"}`,transition:"all .15s"}}/>
+                  {profileIdx===i&&<div style={{position:"absolute",bottom:0,right:0,background:"#f59e0b",borderRadius:10,width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>⭐</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{...S.card,padding:20,marginBottom:14}}>
+            <div style={{...S.label,marginBottom:14}}>SPORTARTEN FREIGEBEN</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {SPORTS.map(s=>(
+                <button key={s.id} onClick={()=>toggleSport(s.id)} style={{padding:"9px 16px",borderRadius:20,border:`1px solid ${sports.includes(s.id)?s.color:"rgba(255,255,255,0.06)"}`,background:sports.includes(s.id)?`${s.color}18`:"transparent",color:sports.includes(s.id)?s.color:"#555",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:13}}>
+                  {s.emoji} {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button onClick={()=>sports.length>0&&setScreen("register-model-pose")} style={S.btn(sports.length>0)}>
+            {sports.length>0?"Weiter → Verifikation":"Mindestens 1 Sportart wählen"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // REGISTER MODEL — VERIFIKATIONS-POSE
+  if(screen==="register-model-pose")return(
+    <div style={S.page}><style>{css}</style>
+      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
+        <div className="fade-up">
+          <div style={{textAlign:"center",marginBottom:24}}><Logo size={32}/><div style={{...S.mono,fontSize:11,color:"#f59e0b",marginTop:6}}>⭐ Model Registrierung — Schritt 3/3</div></div>
+          <div style={{...S.card,padding:28,marginBottom:14}}>
+            <div style={{...S.label,marginBottom:16}}>VERIFIKATIONS-POSE</div>
+            <div style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:14,padding:24,textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:44,marginBottom:10}}>🤳</div>
+              <div style={{fontSize:17,fontWeight:700,color:"#f59e0b",lineHeight:1.5}}>{pose}</div>
+            </div>
+            <p style={{color:"#5a5e6b",fontSize:13,marginBottom:20,lineHeight:1.6}}>
+              Mache ein Foto von dir in genau dieser Pose. Das bestätigt dass du wirklich du bist.
+              Nach dem Upload erhältst du eine Bestätigungsmail.
+            </p>
+            {error&&<div style={{...S.mono,fontSize:11,color:"#f87171",marginBottom:16,padding:"8px 12px",background:"rgba(248,113,113,0.08)",borderRadius:8}}>{error}</div>}
+            {loading?(
+              <div style={{textAlign:"center",padding:"20px 0"}}>
+                <div className="spin" style={{fontSize:40,display:"inline-block",marginBottom:12}}>⭐</div>
+                <div style={{...S.mono,fontSize:12,color:"#f59e0b"}}>Wird gespeichert...</div>
+              </div>
+            ):(
+              <label style={{display:"block",padding:"14px 0",background:"linear-gradient(135deg,#f59e0b,#d97706)",borderRadius:12,fontWeight:700,cursor:"pointer",color:"#000",fontSize:15,textAlign:"center"}}>
+                📸 Verifikationsfoto hochladen & Registrierung abschließen
+                <input type="file" accept="image/*" onChange={e=>e.target.files[0]&&registerModelFinal(e.target.files[0])} style={{display:"none"}}/>
+              </label>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // REGISTER MODEL — FERTIG
+  if(screen==="register-model-done")return(
+    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
+      <style>{css}</style>
+      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:440,textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
+        <div style={{fontSize:56,marginBottom:16}}>🎉</div>
+        <Logo size={32}/>
+        <h2 style={{fontSize:20,fontWeight:700,margin:"16px 0 8px"}}>Registrierung fast abgeschlossen!</h2>
+        <p style={{color:"#5a5e6b",fontSize:14,lineHeight:1.7,marginBottom:24}}>
+          Wir haben dir eine Bestätigungsmail an <strong style={{color:"#f59e0b"}}>{email}</strong> geschickt.
+          Klick auf den Link in der Mail um dein Profil zu aktivieren.
+        </p>
+        <div style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:12,padding:16,...S.mono,fontSize:11,color:"#f59e0b",marginBottom:24}}>
+          Nach Bestätigung wirst du von uns freigeschaltet und kannst Tokens verdienen.
+        </div>
+        <button onClick={()=>setScreen("login")} style={S.btn(true)}>Zum Login →</button>
+      </div>
+    </div>
+  );
+
+  // CHECK EMAIL
+  if(screen==="check-email")return(
+    <div style={{...S.page,display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh"}}>
+      <style>{css}</style>
+      <div className="fade-up" style={{...S.card,padding:40,width:"100%",maxWidth:440,textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.6)"}}>
+        <div style={{fontSize:56,marginBottom:16}}>📧</div>
+        <Logo size={32}/>
+        <h2 style={{fontSize:20,fontWeight:700,margin:"16px 0 8px"}}>Bestätigungsmail gesendet!</h2>
+        <p style={{color:"#5a5e6b",fontSize:14,lineHeight:1.7,marginBottom:24}}>
+          Wir haben dir einen Link an <strong style={{color:"#f59e0b"}}>{email}</strong> geschickt.
+          Klick darauf um deinen Account zu aktivieren.
+        </p>
+        <button onClick={()=>setScreen("login")} style={S.btn(true)}>Zum Login →</button>
       </div>
     </div>
   );
 }
 
+// ─── 5 FOTOS KAMERA ───
 function FaceCapture({onComplete,userEmail}){
   var [currentAngle,setCurrentAngle]=useState(0);
   var [photos,setPhotos]=useState([]);
@@ -179,9 +385,7 @@ function FaceCapture({onComplete,userEmail}){
       setTimeout(()=>{if(videoRef.current)videoRef.current.srcObject=stream;},150);
     }catch(e){alert("Kamera-Erlaubnis benötigt!");}
   }
-
   function stopCamera(){if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}}
-
   async function captureFrame(){
     var video=videoRef.current;
     if(!video||video.videoWidth===0){alert("Kamera noch nicht bereit.");return;}
@@ -199,14 +403,13 @@ function FaceCapture({onComplete,userEmail}){
           var res=await fetch(`${BACKEND_URL}/model/upload-photo`,{method:"POST",body:fd});
           var data=await res.json();
           newPhotos[0].cloudinaryUrl=data.photo_url;
-        }catch(e){console.error("Upload fehler:",e);}
+        }catch(e){console.error(e);}
         setUploading(false);
       }
       if(currentAngle<FACE_ANGLES.length-1){setCurrentAngle(currentAngle+1);}
       else{stopCamera();onComplete(newPhotos);}
     },"image/jpeg",0.92);
   }
-
   var angle=FACE_ANGLES[currentAngle];
   return(
     <div style={{textAlign:"center"}}>
@@ -244,166 +447,43 @@ function FaceCapture({onComplete,userEmail}){
   );
 }
 
+// ─── MODEL DASHBOARD ───
 function ModelDashboard({user,onLogout}){
-  var [step,setStep]=useState("capture");
-  var [photos,setPhotos]=useState([]);
-  var [sports,setSports]=useState([]);
-  var [consent,setConsent]=useState(false);
-  var [profilePhotoIdx,setProfilePhotoIdx]=useState(0);
-  var [pose]=useState(()=>ALL_POSES[Math.floor(Math.random()*ALL_POSES.length)]);
-  var [verifyStep,setVerifyStep]=useState("pending");
-  var [earnings,setEarnings]=useState(0);
-  var [modelName,setModelName]=useState("");
-  var [saving,setSaving]=useState(false);
-
-  function toggleSport(id){setSports(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);}
-
-  async function saveModelToSupabase(){
-    setSaving(true);
-    try{
-      var faceUrl=photos[profilePhotoIdx]?.cloudinaryUrl||photos[0]?.cloudinaryUrl||"";
-      var {error}=await supabase.from("models").upsert({
-        email:user.email,
-        name:modelName||user.email.split("@")[0],
-        face_url:faceUrl,
-        sports:sports,
-        verified:false,
-      });
-      if(error)throw error;
-    }catch(e){console.error("Supabase Fehler:",e);}
-    setSaving(false);
-  }
-
-  async function handleVerifyUpload(file){
-    setVerifyStep("uploading");
-    try{
-      var fd=new FormData();fd.append("photo",file);fd.append("email",user.email);
-      var res=await fetch(`${BACKEND_URL}/model/verify`,{method:"POST",body:fd});
-      var data=await res.json();
-      if(data.verified){
-        await supabase.from("models").update({verified:true}).eq("email",user.email);
-        setVerifyStep("verified");
-      }
-    }catch(e){alert("Fehler: "+e.message);setVerifyStep("pending");}
-  }
-
-  if(step==="capture")return(
+  var [earnings,setEarnings]=useState(user.earnings||0);
+  var modelData=user.modelData;
+  return(
     <div style={S.page}><style>{css}</style>
       <NavBar user={user} onLogout={onLogout} earnings={earnings}/>
       <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
         <div className="fade-up">
-          <h1 style={{...S.display,fontSize:32,marginBottom:4}}>Model-Profil</h1>
-          <p style={{color:"#5a5e6b",fontSize:13,marginBottom:24}}>Schritt 1 von 3 — 5 Gesichtsfotos aufnehmen</p>
-          <div style={{...S.card,padding:24}}>
-            <div style={{...S.label,marginBottom:16}}>GESICHTSFOTOS (5 WINKEL)</div>
-            <FaceCapture userEmail={user.email} onComplete={p=>{setPhotos(p);setStep("sports");}}/>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  if(step==="sports")return(
-    <div style={S.page}><style>{css}</style>
-      <NavBar user={user} onLogout={onLogout} earnings={earnings}/>
-      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <h1 style={{...S.display,fontSize:32,marginBottom:4}}>Profil & Sportarten</h1>
-          <p style={{color:"#5a5e6b",fontSize:13,marginBottom:24}}>Schritt 2 von 3</p>
-          <div style={{...S.card,padding:20,marginBottom:14}}>
-            <div style={{...S.label,marginBottom:12}}>DEIN NAME</div>
-            <input style={S.input} value={modelName} onChange={e=>setModelName(e.target.value)} placeholder="z.B. Alex M."/>
-          </div>
-          <div style={{...S.card,padding:20,marginBottom:14}}>
-            <div style={{...S.label,marginBottom:12}}>PROFILBILD WÄHLEN</div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {photos.map((p,i)=>(
-                <div key={i} onClick={()=>setProfilePhotoIdx(i)} style={{cursor:"pointer",position:"relative"}}>
-                  <img src={p.url} alt="" style={{width:72,height:72,borderRadius:36,objectFit:"cover",border:`3px solid ${profilePhotoIdx===i?"#f59e0b":"rgba(255,255,255,0.06)"}`,transition:"all .15s"}}/>
-                  {profilePhotoIdx===i&&<div style={{position:"absolute",bottom:0,right:0,background:"#f59e0b",borderRadius:10,width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11}}>⭐</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{...S.card,padding:20,marginBottom:14}}>
-            <div style={{...S.label,marginBottom:14}}>SPORTARTEN FREIGEBEN</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-              {SPORTS.map(s=>(
-                <button key={s.id} onClick={()=>toggleSport(s.id)} style={{padding:"9px 16px",borderRadius:20,border:`1px solid ${sports.includes(s.id)?s.color:"rgba(255,255,255,0.06)"}`,background:sports.includes(s.id)?`${s.color}18`:"transparent",color:sports.includes(s.id)?s.color:"#555",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:13}}>
-                  {s.emoji} {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button onClick={()=>sports.length>0&&setStep("consent")} style={S.btn(sports.length>0)}>
-            {sports.length>0?"Weiter →":"Mindestens 1 Sportart wählen"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  if(step==="consent")return(
-    <div style={S.page}><style>{css}</style>
-      <NavBar user={user} onLogout={onLogout} earnings={earnings}/>
-      <div style={{maxWidth:600,margin:"0 auto",padding:"32px 16px"}}>
-        <div className="fade-up">
-          <h1 style={{...S.display,fontSize:32,marginBottom:4}}>Einwilligung & Verifikation</h1>
-          <p style={{color:"#5a5e6b",fontSize:13,marginBottom:24}}>Schritt 3 von 3</p>
-          {verifyStep==="pending"&&(
+          <h1 style={{...S.display,fontSize:36,marginBottom:4}}>Dein Model-Dashboard</h1>
+          <p style={{color:"#5a5e6b",fontSize:13,marginBottom:24}}>Willkommen zurück, {modelData?.name||user.email.split("@")[0]}!</p>
+          <div style={{...S.card,padding:24,marginBottom:14,display:"flex",alignItems:"center",gap:20}}>
+            {modelData?.face_url?(
+              <img src={modelData.face_url} alt="" style={{width:80,height:80,borderRadius:40,objectFit:"cover",border:"3px solid #f59e0b",flexShrink:0}}/>
+            ):(
+              <div style={{width:80,height:80,borderRadius:40,background:"rgba(245,158,11,0.1)",border:"3px solid #f59e0b",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,flexShrink:0}}>👤</div>
+            )}
             <div>
-              <div style={{...S.card,padding:20,marginBottom:14}}>
-                <div style={{...S.label,marginBottom:12}}>EINWILLIGUNG</div>
-                <label style={{display:"flex",gap:12,cursor:"pointer",alignItems:"flex-start"}}>
-                  <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{marginTop:3,accentColor:"#f59e0b",width:16,height:16}}/>
-                  <span style={{fontSize:13,color:"#8892a4",lineHeight:1.7}}>
-                    Ich willige ein, dass mein Gesicht für Face-Swap-Videos in den gewählten Sportarten verwendet wird.
-                    Ich erhalte <strong style={{color:"#22c55e"}}>90% der Tokens</strong> pro Video (1 Token = 0,10 €).
-                    Ich kann jederzeit widerrufen.
-                  </span>
-                </label>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:4}}>{modelData?.name||user.email.split("@")[0]}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {(modelData?.sports||[]).map(s=>{var sp=SPORTS.find(x=>x.id===s);return sp?<span key={s} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:`${sp.color}18`,color:sp.color,fontWeight:600}}>{sp.emoji} {sp.label}</span>:null;})}
               </div>
-              {consent&&(
-                <div style={{...S.card,padding:24,marginBottom:14,border:"1px solid rgba(245,158,11,0.2)"}}>
-                  <div style={{...S.label,marginBottom:12}}>VERIFIKATIONS-POSE</div>
-                  <div style={{background:"rgba(245,158,11,0.06)",borderRadius:12,padding:20,textAlign:"center",marginBottom:16}}>
-                    <div style={{fontSize:40,marginBottom:8}}>🤳</div>
-                    <div style={{fontSize:16,fontWeight:700,color:"#f59e0b"}}>{pose}</div>
-                  </div>
-                  <p style={{color:"#5a5e6b",fontSize:13,marginBottom:16}}>Mache ein Foto in dieser Pose und lade es hoch:</p>
-                  <label style={{display:"block",padding:"14px 0",background:"linear-gradient(135deg,#f59e0b,#d97706)",borderRadius:12,fontWeight:700,cursor:"pointer",color:"#000",fontSize:15,textAlign:"center"}}>
-                    📸 Verifikationsfoto hochladen
-                    <input type="file" accept="image/*" onChange={e=>{e.target.files[0]&&saveModelToSupabase().then(()=>handleVerifyUpload(e.target.files[0]));}} style={{display:"none"}}/>
-                  </label>
-                </div>
-              )}
-              {!consent&&<button style={S.btn(false)}>Erst Einwilligung bestätigen</button>}
+              <div style={{...S.mono,fontSize:10,color:modelData?.verified?"#22c55e":"#f59e0b",marginTop:6}}>{modelData?.verified?"✅ Verifiziert":"⏳ Warte auf Freischaltung"}</div>
             </div>
-          )}
-          {verifyStep==="uploading"&&(
-            <div style={{...S.card,padding:28,textAlign:"center"}}>
-              <div className="spin" style={{fontSize:48,display:"inline-block",marginBottom:16}}>⭐</div>
-              <div style={{fontWeight:700,fontSize:16}}>Wird verifiziert...</div>
-            </div>
-          )}
-          {verifyStep==="verified"&&(
-            <div style={{...S.card,padding:28,textAlign:"center"}}>
-              <div style={{fontSize:56,marginBottom:16}}>🎉</div>
-              <h2 style={{...S.display,fontSize:32,marginBottom:8}}>Profil verifiziert!</h2>
-              <p style={{color:"#5a5e6b",fontSize:14,marginBottom:20}}>Du bist jetzt aktives StarSwap Model!</p>
-              <div style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:12,padding:20}}>
-                <div style={{...S.mono,fontSize:10,color:"#5a5e6b",marginBottom:4}}>GUTHABEN</div>
-                <div style={{...S.display,fontSize:40,color:"#22c55e"}}>💰 0.0 Tokens</div>
-                <div style={{...S.mono,fontSize:11,color:"#5a5e6b",marginTop:4}}>Auszahlung ab 100 Tokens</div>
-              </div>
-            </div>
-          )}
+          </div>
+          <div style={{...S.card,padding:24,textAlign:"center"}}>
+            <div style={{...S.mono,fontSize:10,color:"#3a3d52",marginBottom:8}}>DEIN GUTHABEN</div>
+            <div style={{...S.display,fontSize:48,color:"#22c55e"}}>💰 {earnings.toFixed(1)}</div>
+            <div style={{...S.mono,fontSize:11,color:"#5a5e6b",marginTop:4}}>Tokens · {(earnings*0.10).toFixed(2)} € · Auszahlung ab 100 Tokens</div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+// ─── VIEWER DASHBOARD ───
 function ViewerDashboard({user,onLogout}){
   var [tokens,setTokens]=useState(user.tokens||80);
   var [step,setStep]=useState("gallery");
@@ -422,15 +502,12 @@ function ViewerDashboard({user,onLogout}){
   useEffect(()=>{
     async function loadModels(){
       var {data,error}=await supabase.from("models").select("*").eq("verified",true);
-      if(!error&&data&&data.length>0)setModels(data);
+      if(!error&&data)setModels(data);
     }
     loadModels();
   },[]);
 
-  function searchVideos(){
-    setLoading(true);
-    setTimeout(()=>{setSuggestions(getVideoSuggestions(prompt));setLoading(false);setStep("suggestions");},1200);
-  }
+  function searchVideos(){setLoading(true);setTimeout(()=>{setSuggestions(getVideoSuggestions(prompt));setLoading(false);setStep("suggestions");},1200);}
 
   async function generateAndUnlock(durationSeconds){
     var price=getTokenPrice(durationSeconds);
@@ -439,17 +516,14 @@ function ViewerDashboard({user,onLogout}){
     var idx=0;setProcMsg(PROC_MSGS[0]);
     var interval=setInterval(()=>{idx=Math.min(idx+1,PROC_MSGS.length-1);setProcMsg(PROC_MSGS[idx]);},5000);
     try{
-      var fd=new FormData();
-      fd.append("prompt",prompt);
-      fd.append("face_url",selectedModel.face_url);
+      var fd=new FormData();fd.append("prompt",prompt);fd.append("face_url",selectedModel.face_url);
       var res=await fetch(`${BACKEND_URL}/faceswap`,{method:"POST",body:fd});
       clearInterval(interval);
       if(!res.ok){var err=await res.json();throw new Error(err.detail||"Fehler");}
       var data=await res.json();
-      setResultUrl(data.video_url);
-      setTokens(t=>t-price);
+      setResultUrl(data.video_url);setTokens(t=>t-price);
       await supabase.from("videos").insert({viewer_email:user.email,model_id:selectedModel.id,video_url:data.video_url,prompt,sport:data.sport,tokens_paid:price});
-      await supabase.from("models").update({earnings:selectedModel.earnings+(price*0.9)}).eq("id",selectedModel.id);
+      await supabase.from("models").update({earnings:(selectedModel.earnings||0)+(price*0.9)}).eq("id",selectedModel.id);
     }catch(e){clearInterval(interval);setErrorMsg(e.message);}
     setLoading(false);
   }
@@ -472,13 +546,8 @@ function ViewerDashboard({user,onLogout}){
           ):(
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))",gap:16}}>
               {models.map(model=>(
-                <div key={model.id} className="card-hover" onClick={()=>{setSelectedModel(model);setStep("prompt");}}
-                  style={{...S.card,padding:20,textAlign:"center"}}>
-                  {model.face_url?(
-                    <img src={model.face_url} alt={model.name} style={{width:90,height:90,borderRadius:45,objectFit:"cover",border:"3px solid #f59e0b",marginBottom:12,display:"block",margin:"0 auto 12px"}}/>
-                  ):(
-                    <div style={{width:90,height:90,borderRadius:45,background:"rgba(245,158,11,0.1)",border:"3px solid #f59e0b",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 12px"}}>👤</div>
-                  )}
+                <div key={model.id} className="card-hover" onClick={()=>{setSelectedModel(model);setStep("prompt");}} style={{...S.card,padding:20,textAlign:"center"}}>
+                  {model.face_url?<img src={model.face_url} alt={model.name} style={{width:90,height:90,borderRadius:45,objectFit:"cover",border:"3px solid #f59e0b",marginBottom:12,display:"block",margin:"0 auto 12px"}}/>:<div style={{width:90,height:90,borderRadius:45,background:"rgba(245,158,11,0.1)",border:"3px solid #f59e0b",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:36,margin:"0 auto 12px"}}>👤</div>}
                   <div style={{fontWeight:700,fontSize:16,marginBottom:8}}>{model.name||model.email.split("@")[0]}</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:4,justifyContent:"center",marginBottom:8}}>
                     {(model.sports||[]).map(s=>{var sp=SPORTS.find(x=>x.id===s);return sp?<span key={s} style={{fontSize:11,padding:"2px 8px",borderRadius:10,background:`${sp.color}18`,color:sp.color,fontWeight:600}}>{sp.emoji} {sp.label}</span>:null;})}
@@ -500,28 +569,15 @@ function ViewerDashboard({user,onLogout}){
         <div className="fade-up">
           <button onClick={reset} style={{...S.mono,fontSize:11,color:"#555",background:"none",border:"none",cursor:"pointer",marginBottom:20,padding:0}}>← Zurück</button>
           <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
-            {selectedModel.face_url?(
-              <img src={selectedModel.face_url} alt="" style={{width:64,height:64,borderRadius:32,objectFit:"cover",border:"2px solid #f59e0b"}}/>
-            ):(
-              <div style={{width:64,height:64,borderRadius:32,background:"rgba(245,158,11,0.1)",border:"2px solid #f59e0b",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>👤</div>
-            )}
-            <div>
-              <div style={{...S.display,fontSize:24}}>{selectedModel.name||selectedModel.email.split("@")[0]}</div>
-              <div style={{...S.mono,fontSize:10,color:"#22c55e"}}>✅ Verifiziertes Model</div>
-            </div>
+            {selectedModel.face_url?<img src={selectedModel.face_url} alt="" style={{width:64,height:64,borderRadius:32,objectFit:"cover",border:"2px solid #f59e0b"}}/>:<div style={{width:64,height:64,borderRadius:32,background:"rgba(245,158,11,0.1)",border:"2px solid #f59e0b",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>👤</div>}
+            <div><div style={{...S.display,fontSize:24}}>{selectedModel.name||selectedModel.email.split("@")[0]}</div><div style={{...S.mono,fontSize:10,color:"#22c55e"}}>✅ Verifiziertes Model</div></div>
           </div>
           <div style={{...S.card,padding:22,marginBottom:20}}>
             <div style={{...S.label,marginBottom:12}}>WAS SOLL DAS MODEL TUN?</div>
-            <textarea value={prompt} onChange={e=>setPrompt(e.target.value)}
-              placeholder="z.B. ich will beim Surfen in Bali auf einer riesigen Welle reiten"
-              style={{...S.input,minHeight:100,resize:"vertical",lineHeight:1.7}}/>
-            <div style={{...S.mono,fontSize:10,color:"#1e2030",marginTop:8}}>
-              Verfügbar: {(selectedModel.sports||[]).map(s=>SPORTS.find(x=>x.id===s)?.label).filter(Boolean).join(" · ")}
-            </div>
+            <textarea value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="z.B. beim Surfen in Bali auf einer riesigen Welle reiten" style={{...S.input,minHeight:100,resize:"vertical",lineHeight:1.7}}/>
+            <div style={{...S.mono,fontSize:10,color:"#1e2030",marginTop:8}}>Verfügbar: {(selectedModel.sports||[]).map(s=>SPORTS.find(x=>x.id===s)?.label).filter(Boolean).join(" · ")}</div>
           </div>
-          <button onClick={searchVideos} style={S.btn(prompt.trim().length>5&&!loading)}>
-            {loading?"⏳ Suche Videos...":prompt.trim().length>5?"🔍 3 Video-Vorschläge finden →":"Mindestens 6 Zeichen eingeben"}
-          </button>
+          <button onClick={searchVideos} style={S.btn(prompt.trim().length>5&&!loading)}>{loading?"⏳ Suche Videos...":prompt.trim().length>5?"🔍 3 Video-Vorschläge finden →":"Mindestens 6 Zeichen eingeben"}</button>
         </div>
       </div>
     </div>
@@ -542,10 +598,7 @@ function ViewerDashboard({user,onLogout}){
                   <img src={video.thumb} alt={video.title} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                   <div style={{position:"absolute",inset:0,background:"linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)"}}/>
                   <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",background:"rgba(0,0,0,0.6)",borderRadius:30,width:52,height:52,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>▶️</div>
-                  <div style={{position:"absolute",bottom:10,left:12,right:12}}>
-                    <div style={{fontWeight:700,fontSize:14}}>{video.title}</div>
-                    <div style={{...S.mono,fontSize:10,color:"#aaa"}}>{formatDuration(video.duration)}</div>
-                  </div>
+                  <div style={{position:"absolute",bottom:10,left:12,right:12}}><div style={{fontWeight:700,fontSize:14}}>{video.title}</div><div style={{...S.mono,fontSize:10,color:"#aaa"}}>{formatDuration(video.duration)}</div></div>
                   <div style={{position:"absolute",top:10,right:10,background:"rgba(245,158,11,0.9)",borderRadius:8,padding:"3px 8px",...S.mono,fontSize:10,color:"#000",fontWeight:700}}>5 SEK GRATIS</div>
                 </div>
                 <div style={{padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -627,7 +680,16 @@ function ViewerDashboard({user,onLogout}){
 
 export default function App(){
   var [user,setUser]=useState(null);
-  if(!user)return <LoginScreen onLogin={setUser}/>;
+
+  useEffect(()=>{
+    supabase.auth.onAuthStateChange((event,session)=>{
+      if(event==="SIGNED_IN"&&session&&!user){
+        // Auto-login nach Mail-Bestätigung
+      }
+    });
+  },[]);
+
+  if(!user)return <AuthScreen onLogin={setUser}/>;
   if(user.role==="model")return <ModelDashboard user={user} onLogout={()=>setUser(null)}/>;
   return <ViewerDashboard user={user} onLogout={()=>setUser(null)}/>;
 }
